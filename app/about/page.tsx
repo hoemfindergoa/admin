@@ -11,7 +11,7 @@ import OrganizationSection from '@/components/organizationSection';
 import AboutHeader from '@/components/AboutHeader';
 
 // --- IMAGES ---
-import boywithfootball from "../../public/test/616.webp"; 
+import boywithfootball from "../../public/test/616.webp";
 import girlwithbook from "../../public/test/632.webp";
 import boywithelephant from "../../public/test/634.webp";
 import bgPattern from "../../public/test/642.webp";
@@ -81,14 +81,14 @@ const aboutSections = [
 const AboutPage = () => {
   return (
     <main className={`bg-[#FFFDF6] ${bodyFont.className} overflow-hidden`}>
-      <AboutHeader 
-        title="About Us" 
-        subtitle="A place where imagination has no limits and every child is a star." 
+      <AboutHeader
+        title="About Us"
+        subtitle="A place where imagination has no limits and every child is a star."
       />
 
       {/* Intro Text Section */}
       <section className="py-20 container mx-auto px-6 text-center">
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           whileInView={{ opacity: 1, scale: 1 }}
           viewport={{ once: true }}
@@ -109,8 +109,8 @@ const AboutPage = () => {
 
       {/* Alternating Value Sections */}
       {aboutSections.map((section, idx) => (
-        <section 
-          key={idx} 
+        <section
+          key={idx}
           className={`py-24 relative ${idx % 2 !== 0 ? 'bg-blue-50/50' : ''}`}
         >
           {/* Background decoration */}
@@ -120,25 +120,25 @@ const AboutPage = () => {
 
           <div className="container mx-auto px-6 relative z-10">
             <div className={`flex flex-col ${section.reverse ? 'lg:flex-row-reverse' : 'lg:flex-row'} items-center gap-16`}>
-              
+
               {/* Image Container */}
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, x: section.reverse ? 50 : -50 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true }}
                 className="w-full lg:w-1/2"
               >
                 <div className={`relative rounded-[4rem] border-8 border-black overflow-hidden bg-white ${section.shadow}`}>
-                  <Image 
-                    src={section.image} 
-                    alt={section.title} 
+                  <Image
+                    src={section.image}
+                    alt={section.title}
                     className="w-full h-[400px] lg:h-[500px] object-contain p-8 hover:scale-110 transition-transform duration-500"
                   />
                 </div>
               </motion.div>
 
               {/* Text Container */}
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, x: section.reverse ? -50 : 50 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true }}
@@ -151,7 +151,7 @@ const AboutPage = () => {
                 </div>
 
                 <div className="mb-6">
-                   <BubbleText text={section.title.toUpperCase()} sizeClass="text-5xl lg:text-8xl" />
+                  <BubbleText text={section.title.toUpperCase()} sizeClass="text-5xl lg:text-8xl" />
                 </div>
 
                 <p className="text-2xl text-slate-700 font-black mb-8 leading-relaxed">
@@ -167,9 +167,9 @@ const AboutPage = () => {
 
       {/* Decorative Final Quote */}
       <section className="py-24 bg-white text-center">
-         <p className={`${handFont.className} text-4xl lg:text-6xl text-rose-500 font-bold px-4`}>
-           "Where every little heart finds a home to grow."
-         </p>
+        <p className={`${handFont.className} text-4xl lg:text-6xl text-rose-500 font-bold px-4`}>
+          "Where every little heart finds a home to grow."f
+        </p>
       </section>
       <OrganizationSection />
     </main>
