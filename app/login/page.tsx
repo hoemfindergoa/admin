@@ -3,7 +3,11 @@ import { headers, cookies } from 'next/headers'
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Chrome } from 'lucide-react'
 import Loginform from '../navbar/loginform'
+import { FcGoogle } from 'react-icons/fc'
 
 export default function Login({
   searchParams,
@@ -15,7 +19,7 @@ export default function Login({
 
     const email = formData.get('email') as string
     const password = formData.get('password') as string
-    const cookieStore = cookies()
+    const cookieStore = await cookies()
     const supabase = createClient(cookieStore)
     const { error } = await supabase.auth.signInWithPassword({
       email,
@@ -26,118 +30,78 @@ export default function Login({
       return redirect('/login?message=Could not authenticate user')
     }
 
-    return redirect('/')
-  }
-
- 
-  
-
-  const signUp = async (formData: FormData) => {
-    'use server'
-
-    const origin = headers().get('origin')
-    const email = formData.get('email') as string
-    const password = formData.get('password') as string
-    const cookieStore = cookies()
-    const supabase = createClient(cookieStore)
-
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: `${origin}/auth/callback`,
-      },
-    })
-
-    if (error) {
-      return redirect('/login?message=Could not authenticate user')
-    }
-
-    return redirect('/login?message=Check email to continue sign in process')
+    return redirect('/dashboard')
   }
 
   return (
-   <div className='justify-center flex pt-[90px]'>
-     <div className="flex-1 pt-10  flex flex-col w-full px-8 sm:max-w-md justify-center gap-2">
-      <Link
-        href="/"
-        className="absolute left-8 top-8 py-2 px-4 rounded-md no-underline text-foreground bg-btn-background hover:bg-btn-background-hover flex items-center group text-sm"
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="mr-2 h-4 w-4 transition-transform group-hover:-translate-x-1"
-        >
-          <polyline points="15 18 9 12 15 6" />
-        </svg>{' '}
-        Back
-      </Link>
-      <h3 className="text-3xl font-extrabold mb-8 max-md:text-center">
-              Sign in
-            </h3>
-
-      <form
-        className="animate-in flex-1 flex flex-col w-full justify-center gap-2 text-foreground"
-        action={signIn}
-      >
-        <label className="text-md" htmlFor="email">
-          Email
-        </label>
-        <input
-          className="rounded-md px-4 py-2 bg-inherit border mb-6"
-          name="email"
-          placeholder="you@example.com"
-          required
-        />
-        <label className="text-md" htmlFor="password">
-          Password
-        </label>
-        <input
-          className="rounded-md px-4 py-2 bg-inherit border mb-6"
-          type="password"
-          name="password"
-          placeholder="••••••••"
-          required
-        />
-         <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <input id="remember-me" name="remember-me" type="checkbox" className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" />
-                <label htmlFor="remember-me" className="ml-3 block text-sm">
-                  Remember me
-                </label>
-              </div>
-              <div className="text-sm">
-                <a href="jajvascript:void(0);" className="text-blue-600 hover:text-blue-500">
-                  Forgot your password?
-                </a>
-              </div>
+    <div className="w-full lg:grid lg:min-h-screen lg:grid-cols-2">
+      <div className="flex items-center justify-center py-12">
+        <div className="mx-auto grid w-[350px] gap-6">
+          <div className="grid gap-2 text-center">
+            <h1 className="text-3xl font-bold tracking-tight">Admin Portal</h1>
+            <p className="text-balance text-muted-foreground">
+              Sign in to manage your franchise
+            </p>
+          </div>
+          <form action={signIn} className="grid gap-4">
+            <div className="grid gap-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                placeholder="m@example.com"
+                required
+              />
             </div>
-        <button className="bg-green-700 rounded-md px-4 py-2 text-foreground mb-2">
-          Sign In
-        </button>
-        <button
-          formAction={signUp}
-          className="border border-foreground/20 rounded-md px-4 py-2 text-foreground mb-2"
-        >
-          Sign Up
-        </button>
-        {searchParams?.message && (
-          <p className="mt-4 p-4 bg-foreground/10 text-foreground text-center">
-            {searchParams.message}
-          </p>
-        )}
-      </form>
-      <p className="my-4 text-sm text-gray-400 text-center">or continue with</p>
-      <Loginform/>
+            <div className="grid gap-2">
+              <div className="flex items-center">
+                <Label htmlFor="password">Password</Label>
+                <Link
+                  href="/forgot-password"
+                  className="ml-auto inline-block text-sm underline text-muted-foreground"
+                >
+                  Forgot your password?
+                </Link>
+              </div>
+              <Input id="password" name="password" type="password" required />
+            </div>
+            <Button type="submit" className="w-full">
+              Sign In
+            </Button>
+            {searchParams?.message && (
+              <p className="text-sm text-red-500 text-center">
+                {searchParams.message}
+              </p>
+            )}
+          </form>
+          
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">
+                Or continue with
+              </span>
+            </div>
+          </div>
+          
+          <Loginform />
+          
+        </div>
+      </div>
+      <div className="hidden bg-muted lg:block relative bg-zinc-950">
+        <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 to-zinc-900 z-0"></div>
+        <div className="relative z-10 flex flex-col items-center justify-center h-full text-white p-12">
+           <div className="max-w-md text-center space-y-4">
+              <h2 className="text-4xl font-bold tracking-tight">Streamline your school operations.</h2>
+              <p className="text-lg text-zinc-400">
+                A unified, single-domain B2B SaaS platform that enables a franchisor to establish and manage multiple school franchises seamlessly.
+              </p>
+           </div>
+        </div>
+      </div>
     </div>
-   </div>
   )
 }
- 

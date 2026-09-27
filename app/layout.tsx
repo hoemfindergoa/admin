@@ -13,7 +13,7 @@ export const metadata = {
   metadataBase: new URL(defaultUrl),
   title: 'Best Preschool And Day care - Nurturing Young Minds with Love and Care',
   description: 'A loving and safe environment for children to explore, learn, and grow. We provide a holistic approach to early childhood education.',
-  
+
   // 1. FIX: Proper OpenGraph structure
   openGraph: {
     title: 'Best Preschool And Day care - Nurturing Young Minds with Love and Care',
@@ -23,7 +23,7 @@ export const metadata = {
     images: [
       {
         // 2. FIX: Use a string path from the public folder, not the imported object
-        url: 'public/logonew.png', 
+        url: 'public/logonew.png',
         width: 1200,
         height: 630,
         alt: 'Best Preschool and daycare Logo',
@@ -38,7 +38,7 @@ export const metadata = {
     card: 'summary_large_image',
     title: 'Best Preschool',
     description: 'Nurturing Young Minds with Love and Care',
-    images: ['public/logonew.png'], 
+    images: ['public/logonew.png'],
   },
 }
 
@@ -52,24 +52,23 @@ export default function RootLayout({
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin='' />
-        <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet"/>
+        <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet" />
       </head>
       <body>
-        <Navbar/>
         <ThemeProvider
-            attribute="class"
-            defaultTheme="light"
-            enableSystem
-            disableTransitionOnChange
-          >
-            <main>
-              <Analytics/>
-              <SpeedInsights/>
-              {children}
-            </main>
-          </ThemeProvider>
-          <Toaster />
-          <Footer />
+          attribute="class"
+          defaultTheme="light"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <main>
+            <Analytics />
+            <SpeedInsights />
+            {children}
+          </main>
+        </ThemeProvider>
+        <Toaster />
+        <Footer />
       </body>
     </html>
   )
