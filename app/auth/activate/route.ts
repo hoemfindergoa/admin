@@ -12,8 +12,9 @@ export async function POST() {
   await Promise.all([
     admin.from('school_teachers').update({ user_id: user.id, status: 'ACTIVE' }).eq('email', user.email),
     admin.from('school_parents').update({ user_id: user.id, status: 'ACTIVE' }).eq('email', user.email),
+    admin.from('crm_users').update({ user_id: user.id, status: 'ACTIVE' }).eq('email', user.email),
   ])
-  if (accountRole !== 'TEACHER' && accountRole !== 'PARENT') {
+  if (accountRole !== 'TEACHER' && accountRole !== 'PARENT' && accountRole !== 'CRM_MEMBER') {
     await admin.from('organization_users').update({ user_id: user.id, status: 'ACTIVE' }).eq('email', user.email)
   }
   return NextResponse.json({ ok: true })

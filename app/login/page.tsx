@@ -9,16 +9,20 @@ import { Chrome } from 'lucide-react'
 import Loginform from '../navbar/loginform'
 import { FcGoogle } from 'react-icons/fc'
 
-export default function Login({
+export default async function Login({
   searchParams,
 }: {
-  searchParams: { message: string }
+  searchParams: Promise<{ message?: string; next?: string }> | { message?: string; next?: string }
 }) {
+  const params = await searchParams
+  const next = params.next && (params.next === '/crm' || params.next.startsWith('/crm/')) ? params.next : '/dashboard'
   const signIn = async (formData: FormData) => {
     'use server'
 
     const email = formData.get('email') as string
     const password = formData.get('password') as string
+    const requestedNext = formData.get('next')
+    const destination = typeof requestedNext === 'string' && (requestedNext === '/crm' || requestedNext.startsWith('/crm/')) ? requestedNext : '/dashboard'
     const cookieStore = await cookies()
     const supabase = createClient(cookieStore)
     const { error } = await supabase.auth.signInWithPassword({
@@ -27,10 +31,10 @@ export default function Login({
     })
 
     if (error) {
-      return redirect('/login?message=Could not authenticate user')
+      return redirect(`/login?next=${encodeURIComponent(destination)}&message=Could+not+authenticate+user`)
     }
 
-    return redirect('/dashboard')
+    return redirect(destination)
   }
 
   return (
@@ -44,6 +48,7 @@ export default function Login({
             </p>
           </div>
           <form action={signIn} className="grid gap-4">
+            <input type="hidden" name="next" value={next} />
             <div className="grid gap-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -69,9 +74,9 @@ export default function Login({
             <Button type="submit" className="w-full">
               Sign In
             </Button>
-            {searchParams?.message && (
+            {params.message && (
               <p className="text-sm text-red-500 text-center">
-                {searchParams.message}
+                {params.message}
               </p>
             )}
           </form>
@@ -87,7 +92,7 @@ export default function Login({
             </div>
           </div>
           
-          <Loginform />
+          <Loginform next={next} />
           
         </div>
       </div>

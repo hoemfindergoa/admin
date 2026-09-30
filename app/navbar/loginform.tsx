@@ -2,11 +2,9 @@
 import React from 'react'
 import { Button } from '@/components/ui/button'
 import { createBrowserClient } from '@supabase/ssr'
-import { usePathname } from 'next/navigation'
 import { FcGoogle } from 'react-icons/fc'
 
-export default function LoginForm() {
-  const pathname = usePathname()
+export default function LoginForm({ next = '/dashboard' }: { next?: string }) {
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -20,7 +18,7 @@ export default function LoginForm() {
           access_type: 'offline',
           prompt: 'consent',
         },
-        redirectTo: location.origin + "/auth/callback?next=" + pathname,
+        redirectTo: location.origin + "/auth/callback?next=" + encodeURIComponent(next),
       },
     })
   }

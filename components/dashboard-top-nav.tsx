@@ -24,9 +24,10 @@ interface DashboardTopNavProps {
   orgId: string
   orgName?: string
   allOrgs?: OrgOption[]
+  isSuperAdmin?: boolean
 }
 
-export function DashboardTopNav({ orgId, orgName = "Franchise", allOrgs = [] }: DashboardTopNavProps) {
+export function DashboardTopNav({ orgId, orgName = "Franchise", allOrgs = [], isSuperAdmin = false }: DashboardTopNavProps) {
   const router = useRouter()
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -100,6 +101,7 @@ export function DashboardTopNav({ orgId, orgName = "Franchise", allOrgs = [] }: 
       </div>
 
       <div className="flex items-center gap-4">
+        {isSuperAdmin && <Button asChild variant="outline" size="sm" className="h-8"><Link href="/crm">Sales CRM</Link></Button>}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm" className="h-8 gap-2">

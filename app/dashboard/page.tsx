@@ -9,14 +9,17 @@ import { createClient } from '@/utils/supabase/server'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { createAdminClient } from '@/utils/supabase/admin'
+import { getCrmAccess } from '@/utils/crm-access'
 
 export default async function DashboardRootPage() {
   const cookieStore = await cookies()
   const supabase = createClient(cookieStore)
   const { data: { user } } = await supabase.auth.getUser()
 
-  // Orgs this user owns
-  const ownedOrgs = await getOrganizations()
+  // The RLS-visible organization list also includes staff memberships, so
+  // derive super-admin status from the real owner_id instead of visibility.
+  const visibleOrganizations = await getOrganizations()
+  const ownedOrgs = visibleOrganizations.filter((org: any) => org.owner_id === user?.id)
   const ownedOrgIds = new Set(ownedOrgs.map((o: any) => o.id))
 
   // Orgs this user is a staff member of
@@ -65,6 +68,8 @@ export default async function DashboardRootPage() {
   const money = (amount: number | null) => amount == null ? '—' : new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount)
 
   if (allOrgs.length === 0 && user) {
+    const crmAccess = await getCrmAccess(user.id)
+    if (crmAccess.isCrmMember) redirect('/crm')
     const { data: teacherProfiles } = await supabase.from('school_teachers').select('org_id').eq('user_id', user.id).order('created_at').limit(1)
     if (teacherProfiles?.[0]) redirect(`/teacher/${teacherProfiles[0].org_id}`)
   }
@@ -78,7 +83,7 @@ export default async function DashboardRootPage() {
             Manage all your school branches from one central hub.
           </p>
         </div>
-        {isOwner && <CreateFranchiseSheet />}
+        {isOwner && <div className="flex items-center gap-2"><Link href="/crm"><Button variant="outline">Switch to Sales CRM</Button></Link><CreateFranchiseSheet /></div>}
       </div>
 
       {dashboardTotals && <Card><CardHeader><CardTitle>Franchise network totals</CardTitle><CardDescription>Live totals across the franchises you can access.</CardDescription></CardHeader><CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

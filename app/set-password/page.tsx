@@ -41,7 +41,9 @@ export default function SetPasswordPage() {
 
         // The browser client handles PKCE codes and URL-fragment sessions during initialization.
         if (tokenHash) {
-          window.history.replaceState(null, '', url.pathname)
+          url.searchParams.delete('token_hash')
+          url.searchParams.delete('type')
+          window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`)
         }
 
         const { data: { user }, error: userError } = await supabase.auth.getUser()

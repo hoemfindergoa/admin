@@ -3,6 +3,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { cookies } from 'next/headers'
 import { revalidatePath } from 'next/cache'
+import { getCrmAccess } from '@/utils/crm-access'
 
 export async function getOrganizations() {
   const cookieStore = await cookies()
@@ -45,6 +46,8 @@ export async function createOrganization(formData: FormData) {
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')
+  const crmAccess = await getCrmAccess(user.id)
+  if (crmAccess.isCrmMember) throw new Error('CRM team accounts cannot create school franchises.')
 
   const name = formData.get('name') as string
   const affiliation = formData.get('affiliation') as string

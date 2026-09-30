@@ -10,16 +10,20 @@ export async function middleware(request: NextRequest) {
 
     const path = request.nextUrl.pathname
     
-    // Define what paths are protected
-    const isProtectedRoute = path.startsWith('/dashboard')
+    // Keep the sales CRM and school workspace in distinct URL contexts.
+    const isCrmRoute = path === '/crm' || path.startsWith('/crm/')
+    const isProtectedRoute = path.startsWith('/dashboard') || isCrmRoute
     
     if (isProtectedRoute && !user) {
       const redirectUrl = new URL('/login', request.url)
+      if (isCrmRoute) redirectUrl.searchParams.set('next', request.nextUrl.pathname)
       return NextResponse.redirect(redirectUrl)
     }
     
     if (path === '/login' && user) {
-      const redirectUrl = new URL('/dashboard', request.url)
+      const requestedNext = request.nextUrl.searchParams.get('next')
+      const next = requestedNext && (requestedNext === '/crm' || requestedNext.startsWith('/crm/')) ? requestedNext : '/dashboard'
+      const redirectUrl = new URL(next, request.url)
       return NextResponse.redirect(redirectUrl)
     }
 

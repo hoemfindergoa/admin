@@ -57,7 +57,7 @@ export default async function OrganizationLayout({
         isOwner={isOwner}
       />
       <div className="flex flex-col sm:gap-4 sm:py-0 w-full min-w-0 h-screen overflow-y-auto">
-        <DashboardTopNav orgId={orgId} orgName={org.name} allOrgs={allOrgs ?? []} />
+        <DashboardTopNav orgId={orgId} orgName={org.name} allOrgs={allOrgs ?? []} isSuperAdmin={isOwner} />
         <main className="flex-1 items-start p-4 sm:px-6 sm:py-6 w-full">
           {children}
         </main>

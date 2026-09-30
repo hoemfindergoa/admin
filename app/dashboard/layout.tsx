@@ -1,10 +1,20 @@
 import { DashboardTopNav } from "@/components/dashboard-top-nav"
+import { createClient } from '@/utils/supabase/server'
+import { cookies } from 'next/headers'
+import { redirect } from 'next/navigation'
+import { getCrmAccess } from '@/utils/crm-access'
 
-export default function DashboardRootLayout({
+export default async function DashboardRootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const supabase = createClient(await cookies())
+  const { data: { user } } = await supabase.auth.getUser()
+  if (user) {
+    const access = await getCrmAccess(user.id)
+    if (access.isCrmMember) redirect('/crm')
+  }
   return (
     <div className="flex min-h-screen w-full bg-muted/40">
       <div className="flex flex-col sm:gap-4 sm:py-0 w-full min-w-0">

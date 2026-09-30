@@ -39,8 +39,9 @@ export async function GET(request: Request) {
     await Promise.all([
       adminClient.from('school_teachers').update({ user_id: authUser.id, status: 'ACTIVE' }).eq('email', authUser.email),
       adminClient.from('school_parents').update({ user_id: authUser.id, status: 'ACTIVE' }).eq('email', authUser.email),
+      adminClient.from('crm_users').update({ user_id: authUser.id, status: 'ACTIVE' }).eq('email', authUser.email),
     ])
-    if (accountRole !== 'TEACHER' && accountRole !== 'PARENT') {
+    if (accountRole !== 'TEACHER' && accountRole !== 'PARENT' && accountRole !== 'CRM_MEMBER') {
       await adminClient.from('organization_users').update({ user_id: authUser.id, status: 'ACTIVE' }).eq('email', authUser.email)
     }
   }

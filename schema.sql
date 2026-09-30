@@ -46,7 +46,7 @@ create table if not exists public.profiles (
     id uuid references auth.users(id) on delete cascade primary key,
     full_name text,
     avatar_url text,
-    role text default 'SUPER_ADMIN', -- Default to SUPER_ADMIN when they sign up to create a franchise
+    role text not null default 'FRANCHISE_ADMIN', -- CRM access must be granted explicitly by a trusted administrator
     created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
@@ -56,6 +56,8 @@ create policy "Users can view their own profile"
 on public.profiles for select
 using ( auth.uid() = id );
 
-create policy "Users can update their own profile"
-on public.profiles for update
-using ( auth.uid() = id );
+create policy "Users can update their own profile details"
+on public.profiles for update to authenticated
+using ( auth.uid() = id ) with check ( auth.uid() = id );
+revoke update on public.profiles from anon, authenticated;
+grant update (full_name, avatar_url) on public.profiles to authenticated;
