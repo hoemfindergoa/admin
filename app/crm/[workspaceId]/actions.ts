@@ -26,7 +26,7 @@ async function requireCrmAccess(workspaceId: string, superAdminOnly = false) {
   if (!user) throw new Error('Please sign in to continue.')
   const access = await getCrmAccess(user.id, workspaceId)
   if (!access.canAccessCrm || (superAdminOnly && !access.isSuperAdmin)) throw new Error('You do not have permission to access this CRM action.')
-  return { user, access, admin: createAdminClient() }
+  return { user, access, admin: createAdminClient(), supabase }
 }
 
 function isManager(access: any) {
@@ -101,12 +101,12 @@ export async function getCrmData(workspaceId: string) {
 
 export async function createCrmRecord(workspaceId: string, module: Module, payload: Record<string, any>) {
   if (!validModules.includes(module)) throw new Error('Unknown CRM module.')
-  const { user, access, admin } = await requireCrmAccess(workspaceId, module === 'automation_rules')
+  const { user, access, admin, supabase } = await requireCrmAccess(workspaceId, module === 'automation_rules')
   // Only block campaigns for plain sales reps (not workspace owners or managers)
   if (module === 'campaigns' && !access.isSuperAdmin && !isManager(access)) throw new Error('Only sales managers can manage campaigns.')
   const values = cleanPayload(module, payload, user.id, access, true)
   if (module === 'leads' && values.status === 'CONVERTED') throw new Error('Create a lead first, then use lead conversion to open an opportunity.')
-  const { data, error } = await admin.from(tableByModule[module]).insert(values).select('*').single()
+  const { data, error } = await supabase.from(tableByModule[module]).insert(values).select('*').single()
   if (error) throw new Error(error.message)
 
   if (module === 'leads') await createLeadFollowUps(admin, user.id, [data])
@@ -116,7 +116,7 @@ export async function createCrmRecord(workspaceId: string, module: Module, paylo
 
 export async function updateCrmRecord(workspaceId: string, module: Module, id: string, payload: Record<string, any>) {
   if (!validModules.includes(module)) throw new Error('Unknown CRM module.')
-  const { user, access, admin } = await requireCrmAccess(workspaceId, module === 'automation_rules')
+  const { user, access, admin, supabase } = await requireCrmAccess(workspaceId, module === 'automation_rules')
   if (module === 'campaigns' && !access.isSuperAdmin && !isManager(access)) throw new Error('Only sales managers can manage campaigns.')
   const { data: current, error: readError } = await admin.from(tableByModule[module]).select('*').eq('crm_workspace_id', access.crmWorkspaceId).eq('id', id).maybeSingle()
   if (readError || !current) throw new Error(readError?.message ?? 'This record no longer exists.')
@@ -125,20 +125,20 @@ export async function updateCrmRecord(workspaceId: string, module: Module, id: s
   const values = cleanPayload(module, payload, user.id, access)
   if (!isManager(access) && current.owner_user_id == null && fieldsByModule[module].includes('owner_user_id')) values.owner_user_id = user.id
   if (module === 'leads') { values.updated_by = user.id; values.updated_by_email = user.email ?? null }
-  const { error } = await admin.from(tableByModule[module]).update(values).eq('crm_workspace_id', access.crmWorkspaceId).eq('id', id)
+  const { error } = await supabase.from(tableByModule[module]).update(values).eq('crm_workspace_id', access.crmWorkspaceId).eq('id', id)
   if (error) throw new Error(error.message)
   revalidatePath(`/crm/${workspaceId}`)
 }
 
 export async function deleteCrmRecord(workspaceId: string, module: Module, id: string) {
   if (!validModules.includes(module)) throw new Error('Unknown CRM module.')
-  const { user, access, admin } = await requireCrmAccess(workspaceId, module === 'automation_rules')
+  const { user, access, admin, supabase } = await requireCrmAccess(workspaceId, module === 'automation_rules')
   if (module === 'campaigns' && !access.isSuperAdmin && !isManager(access)) throw new Error('Only sales managers can manage campaigns.')
   const { data: current } = await admin.from(tableByModule[module]).select('id, owner_user_id').eq('crm_workspace_id', access.crmWorkspaceId).eq('id', id).maybeSingle()
   if (!current) return
   if (!canEditRecord(access, user.id, current.owner_user_id)) throw new Error('You can only remove records assigned to you.')
   if (module === 'automation_rules' && !isManager(access)) throw new Error('Only managers can change automation rules.')
-  const { error } = await admin.from(tableByModule[module]).delete().eq('crm_workspace_id', access.crmWorkspaceId).eq('id', id)
+  const { error } = await supabase.from(tableByModule[module]).delete().eq('crm_workspace_id', access.crmWorkspaceId).eq('id', id)
   if (error) throw new Error(error.message)
   revalidatePath(`/crm/${workspaceId}`)
 }

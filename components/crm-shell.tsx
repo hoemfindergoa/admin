@@ -17,12 +17,14 @@ export function CrmShell({
   isSuperAdmin,
   role,
   name,
+  notificationCount,
 }: {
   children: React.ReactNode
   workspaceId: string
   isSuperAdmin: boolean
   role: string
   name: string
+  notificationCount?: number
 }) {
   const [hovered, setHovered] = useState(false)
   const pathname = usePathname()
@@ -105,8 +107,8 @@ export function CrmShell({
       >
         {/* Logo */}
         <div className="flex h-14 shrink-0 items-center border-b border-[#242424] px-[18px]">
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 shadow-md ring-1 ring-white/20">
-            <BarChart3 className="h-3.5 w-3.5 text-white" />
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white p-1 shadow-md ring-1 ring-white/20 overflow-hidden">
+            <img src="/logonew.png" alt="Logo" className="h-full w-full object-contain" />
           </div>
           <span
             className={cn(
@@ -209,16 +211,19 @@ export function CrmShell({
         </div>
       </aside>
 
-      {/* Main — always offset by collapsed sidebar width (64px) */}
-      <div className="flex min-h-screen flex-1 flex-col lg:pl-16">
+      {/* Main — transition padding when sidebar expands */}
+      <div className={cn(
+        "flex min-h-screen flex-1 flex-col transition-[padding] duration-200 ease-in-out",
+        hovered ? "lg:pl-[220px]" : "lg:pl-16"
+      )}>
         {/* Top Header */}
         <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b border-zinc-200/80 bg-white/90 px-4 backdrop-blur-md sm:px-5">
           {/* Mobile logo */}
           <div className="flex items-center gap-2 lg:hidden">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-600">
-              <BarChart3 className="h-3.5 w-3.5 text-white" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white p-1 shadow-sm ring-1 ring-zinc-200 overflow-hidden">
+              <img src="/logonew.png" alt="Logo" className="h-full w-full object-contain" />
             </div>
-            <span className="text-[14px] font-bold">Sales CRM</span>
+            <span className="text-[14px] font-bold text-zinc-900">Sales CRM</span>
           </div>
 
           {/* Search bar */}
@@ -238,7 +243,11 @@ export function CrmShell({
               className="relative rounded-full p-2 text-zinc-500 hover:bg-zinc-100 transition-colors"
             >
               <Bell className="h-4.5 w-4.5" />
-              <span className="absolute right-1.5 top-1.5 flex h-1.5 w-1.5 rounded-full bg-red-500 ring-1 ring-white" />
+              {(notificationCount ?? 0) > 0 && (
+                <span className="absolute -right-1 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white ring-2 ring-white">
+                  {notificationCount! > 99 ? '99+' : notificationCount}
+                </span>
+              )}
             </Link>
             <Link
               href={`${base}/leads?new=1`}

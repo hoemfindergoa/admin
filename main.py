@@ -38,3 +38,8 @@ source_dir = 'public/newimages'  # Folder with your large PNGs
 destination_dir = 'public/compressed'  # Folder to save compressed PNGs
 
 ultra_compress(source_dir, destination_dir, max_width=2000) # Limits width to 2000px
+
+
+
+
+

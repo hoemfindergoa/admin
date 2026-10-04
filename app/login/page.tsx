@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { headers, cookies } from 'next/headers'
 import { createClient } from '@/utils/supabase/server'
+import { createAdminClient } from '@/utils/supabase/admin'
 import { redirect } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -25,13 +26,27 @@ export default async function Login({
     const destination = typeof requestedNext === 'string' && (requestedNext === '/crm' || requestedNext.startsWith('/crm/')) ? requestedNext : '/dashboard'
     const cookieStore = await cookies()
     const supabase = createClient(cookieStore)
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data: authData, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     })
 
     if (error) {
       return redirect(`/login?next=${encodeURIComponent(destination)}&message=Could+not+authenticate+user`)
+    }
+
+    if (authData?.user?.email) {
+      const authUser = authData.user
+      const adminClient = createAdminClient()
+      const accountRole = (authUser as any).user_metadata?.role
+      await Promise.all([
+        adminClient.from('school_teachers').update({ user_id: authUser.id, status: 'ACTIVE' }).eq('email', authUser.email),
+        adminClient.from('school_parents').update({ user_id: authUser.id, status: 'ACTIVE' }).eq('email', authUser.email),
+        adminClient.from('crm_users').update({ user_id: authUser.id, status: 'ACTIVE' }).eq('email', authUser.email),
+      ])
+      if (accountRole !== 'TEACHER' && accountRole !== 'PARENT' && accountRole !== 'CRM_MEMBER') {
+        await adminClient.from('organization_users').update({ user_id: authUser.id, status: 'ACTIVE' }).eq('email', authUser.email)
+      }
     }
 
     return redirect(destination)

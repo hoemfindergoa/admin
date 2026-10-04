@@ -79,6 +79,21 @@ export function CreateFranchiseSheet({ trigger }: CreateFranchiseSheetProps) {
             />
           </div>
 
+          <div className="space-y-2">
+            <Label htmlFor="sf-logo">
+              Franchise Logo
+            </Label>
+            <Input
+              id="sf-logo"
+              name="logo_file"
+              type="file"
+              accept="image/*"
+              disabled={isPending}
+              className="cursor-pointer"
+            />
+            <p className="text-[11px] text-zinc-500">Upload a square image (PNG/JPG) for best results.</p>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="sf-affiliation">Affiliation / Board</Label>

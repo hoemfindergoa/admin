@@ -19,6 +19,7 @@ create table if not exists public.school_sections (
   name text not null,
   created_at timestamptz not null default timezone('utc'::text, now()),
   unique (org_id, class_id, id),
+  unique (org_id, id),
   foreign key (org_id, class_id) references public.school_classes(org_id, id) on delete cascade
 );
 create unique index if not exists school_sections_class_name_unique
@@ -30,6 +31,8 @@ create table if not exists public.school_subjects (
   class_id uuid not null,
   section_id uuid not null,
   name text not null,
+  knowledge_type text,
+  is_compulsory boolean not null default true,
   created_at timestamptz not null default timezone('utc'::text, now()),
   foreign key (org_id, class_id, section_id)
     references public.school_sections(org_id, class_id, id) on delete cascade
@@ -38,6 +41,7 @@ create unique index if not exists school_subjects_section_name_unique
   on public.school_subjects (section_id, lower(name));
 create unique index if not exists school_subjects_org_id_id_unique
   on public.school_subjects (org_id, id);
+
 
 create table if not exists public.students (
   id uuid primary key default uuid_generate_v4(),
@@ -91,9 +95,11 @@ create table if not exists public.school_houses (
   id uuid primary key default uuid_generate_v4(),
   org_id uuid not null references public.organizations(id) on delete cascade,
   name text not null,
+  color text,
   created_at timestamptz not null default timezone('utc'::text, now()),
   unique (org_id, id)
 );
+alter table public.school_houses add column if not exists color text;
 create unique index if not exists school_houses_org_name_unique on public.school_houses (org_id, lower(name));
 
 create table if not exists public.student_details (
@@ -149,13 +155,13 @@ create table if not exists public.school_teachers (
 create unique index if not exists school_teachers_org_email_unique on public.school_teachers (org_id, lower(email));
 create index if not exists school_teachers_user_id_idx on public.school_teachers (user_id);
 
-create table if not exists public.school_class_teachers (
+create table if not exists public.school_section_teachers (
   org_id uuid not null,
-  class_id uuid not null,
+  section_id uuid not null,
   teacher_id uuid not null,
   created_at timestamptz not null default timezone('utc'::text, now()),
-  primary key (org_id, class_id, teacher_id),
-  foreign key (org_id, class_id) references public.school_classes(org_id, id) on delete cascade,
+  primary key (org_id, section_id, teacher_id),
+  foreign key (org_id, section_id) references public.school_sections(org_id, id) on delete cascade,
   foreign key (org_id, teacher_id) references public.school_teachers(org_id, id) on delete cascade
 );
 
@@ -247,7 +253,7 @@ as $$
     select 1 from public.school_teachers t
     where t.org_id = target_org_id and t.user_id = auth.uid()
       and (
-        exists (select 1 from public.school_class_teachers ct where ct.org_id = target_org_id and ct.teacher_id = t.id)
+        exists (select 1 from public.school_section_teachers ct where ct.org_id = target_org_id and ct.teacher_id = t.id)
         or exists (select 1 from public.school_subject_teachers st where st.org_id = target_org_id and st.teacher_id = t.id)
       )
   )) or (requested_permission = 'parent' and exists (
@@ -264,7 +270,7 @@ returns boolean language sql stable security definer set search_path = public as
     select 1 from public.school_teachers t
     where t.org_id = target_org_id and t.user_id = auth.uid()
       and (
-        exists (select 1 from public.school_class_teachers ct where ct.org_id = target_org_id and ct.class_id = target_class_id and ct.teacher_id = t.id)
+        exists (select 1 from public.school_section_teachers ct join public.school_sections s on s.org_id = ct.org_id and s.id = ct.section_id where ct.org_id = target_org_id and s.class_id = target_class_id and ct.teacher_id = t.id)
         or exists (select 1 from public.school_subject_teachers st join public.school_subjects s on s.org_id = st.org_id and s.id = st.subject_id where st.org_id = target_org_id and s.class_id = target_class_id and st.teacher_id = t.id)
       )
   );
@@ -276,7 +282,7 @@ returns boolean language sql stable security definer set search_path = public as
     select 1 from public.school_teachers t
     where t.org_id = target_org_id and t.user_id = auth.uid()
       and (
-        exists (select 1 from public.school_class_teachers ct where ct.org_id = target_org_id and ct.class_id = target_class_id and ct.teacher_id = t.id)
+        exists (select 1 from public.school_section_teachers ct where ct.org_id = target_org_id and ct.section_id = target_section_id and ct.teacher_id = t.id)
         or exists (select 1 from public.school_subject_teachers st join public.school_subjects s on s.org_id = st.org_id and s.id = st.subject_id where st.org_id = target_org_id and s.class_id = target_class_id and s.section_id = target_section_id and st.teacher_id = t.id)
       )
   );
@@ -288,7 +294,7 @@ returns boolean language sql stable security definer set search_path = public as
     select 1 from public.school_teachers t join public.school_subjects s on s.org_id = t.org_id
     where t.org_id = target_org_id and t.user_id = auth.uid() and s.id = target_subject_id
       and (
-        exists (select 1 from public.school_class_teachers ct where ct.org_id = t.org_id and ct.class_id = s.class_id and ct.teacher_id = t.id)
+        exists (select 1 from public.school_section_teachers ct where ct.org_id = t.org_id and ct.section_id = s.section_id and ct.teacher_id = t.id)
         or exists (select 1 from public.school_subject_teachers st where st.org_id = t.org_id and st.subject_id = s.id and st.teacher_id = t.id)
       )
   );
@@ -317,7 +323,7 @@ alter table public.school_classes enable row level security;
 alter table public.school_sections enable row level security;
 alter table public.school_subjects enable row level security;
 alter table public.students enable row level security;
-alter table public.school_class_teachers enable row level security;
+alter table public.school_section_teachers enable row level security;
 alter table public.school_subject_teachers enable row level security;
 alter table public.school_teachers enable row level security;
 alter table public.school_parents enable row level security;
@@ -330,7 +336,7 @@ grant select, insert, update, delete on public.school_classes to authenticated;
 grant select, insert, update, delete on public.school_sections to authenticated;
 grant select, insert, update, delete on public.school_subjects to authenticated;
 grant select, insert, update, delete on public.students to authenticated;
-grant select, insert, update, delete on public.school_class_teachers to authenticated;
+grant select, insert, update, delete on public.school_section_teachers to authenticated;
 grant select, insert, update, delete on public.school_subject_teachers to authenticated;
 grant select, insert, update, delete on public.school_teachers to authenticated;
 grant select, insert, update, delete on public.school_parents to authenticated;
@@ -418,14 +424,14 @@ create policy "School staff manage student details" on public.student_details
   for all to authenticated using (public.has_school_permission(org_id, 'students') or public.has_school_permission(org_id, 'manage_school'))
   with check (public.has_school_permission(org_id, 'students') or public.has_school_permission(org_id, 'manage_school'));
 
-drop policy if exists "School users can read class teacher assignments" on public.school_class_teachers;
-create policy "School users can read class teacher assignments" on public.school_class_teachers
+drop policy if exists "School users can read section teacher assignments" on public.school_section_teachers;
+create policy "School users can read section teacher assignments" on public.school_section_teachers
   for select to authenticated using (
     public.has_school_permission(org_id, 'manage_school')
-    or exists (select 1 from public.school_teachers t where t.org_id = school_class_teachers.org_id and t.id = school_class_teachers.teacher_id and t.user_id = auth.uid())
+    or exists (select 1 from public.school_teachers t where t.org_id = school_section_teachers.org_id and t.id = school_section_teachers.teacher_id and t.user_id = auth.uid())
   );
-drop policy if exists "School admins manage class teacher assignments" on public.school_class_teachers;
-create policy "School admins manage class teacher assignments" on public.school_class_teachers
+drop policy if exists "School admins manage section teacher assignments" on public.school_section_teachers;
+create policy "School admins manage section teacher assignments" on public.school_section_teachers
   for all to authenticated using (public.has_school_permission(org_id, 'manage_school'))
   with check (public.has_school_permission(org_id, 'manage_school'));
 
@@ -969,3 +975,85 @@ drop policy if exists "CRM users manage automation rules" on public.crm_automati
 create policy "CRM users manage automation rules" on public.crm_automation_rules for all to authenticated
   using (crm_workspace_id = public.current_crm_workspace_id() and public.is_crm_super_admin())
   with check (crm_workspace_id = public.current_crm_workspace_id() and public.is_crm_super_admin());
+
+
+create table if not exists public.school_attendance (
+  id uuid primary key default uuid_generate_v4(),
+  org_id uuid not null references public.organizations(id) on delete cascade,
+  student_id uuid not null,
+  class_id uuid not null,
+  section_id uuid not null,
+  date date not null,
+  status text not null check (status in ('PRESENT', 'ABSENT', 'LATE', 'HALF_DAY')),
+  notes text,
+  recorded_by uuid,
+  created_at timestamptz not null default timezone('utc'::text, now()),
+  updated_at timestamptz not null default timezone('utc'::text, now()),
+  unique (org_id, student_id, date)
+);
+create index if not exists school_attendance_org_class_section_date_idx on public.school_attendance (org_id, class_id, section_id, date);
+
+alter table public.school_attendance enable row level security;
+grant select, insert, update, delete on public.school_attendance to authenticated;
+
+drop policy if exists "School staff can manage attendance" on public.school_attendance;
+create policy "School staff can manage attendance" on public.school_attendance
+  for all to authenticated
+  using (public.has_school_permission(org_id, 'manage_school') or public.has_school_permission(org_id, 'attendance') or public.has_school_permission(org_id, 'teacher'))
+  with check (public.has_school_permission(org_id, 'manage_school') or public.has_school_permission(org_id, 'attendance') or public.has_school_permission(org_id, 'teacher'));
+
+
+create table if not exists public.school_fee_structures (
+  id uuid primary key default gen_random_uuid(),
+  org_id uuid not null references public.organizations(id) on delete cascade,
+  name text not null,
+  amount numeric not null check (amount >= 0),
+  frequency text not null default 'MONTHLY', -- MONTHLY, YEARLY, ONCE
+  target_type text not null default 'ALL', -- ALL, CLASS, STUDENT, FAMILY, GROUP
+  target_class_id uuid references public.school_classes(id) on delete cascade,
+  description text,
+  created_at timestamp with time zone default now(),
+  updated_at timestamp with time zone default now()
+);
+
+create index if not exists school_fee_structures_org_idx on public.school_fee_structures (org_id);
+
+create table if not exists public.school_student_fee_assignments (
+  id uuid primary key default gen_random_uuid(),
+  org_id uuid not null references public.organizations(id) on delete cascade,
+  student_id uuid not null references public.students(id) on delete cascade,
+  fee_structure_id uuid not null references public.school_fee_structures(id) on delete cascade,
+  discount_amount numeric not null default 0 check (discount_amount >= 0),
+  created_at timestamp with time zone default now(),
+  unique(student_id, fee_structure_id)
+);
+
+create index if not exists school_student_fee_assignments_org_idx on public.school_student_fee_assignments (org_id);
+
+alter table public.school_fee_structures enable row level security;
+alter table public.school_student_fee_assignments enable row level security;
+
+grant select, insert, update, delete on public.school_fee_structures to authenticated;
+grant select, insert, update, delete on public.school_student_fee_assignments to authenticated;
+
+drop policy if exists "School staff manage fee structures" on public.school_fee_structures;
+create policy "School staff manage fee structures" on public.school_fee_structures
+  for all using (
+    exists (
+      select 1 from public.organization_users
+      where organization_users.org_id = school_fee_structures.org_id
+      and organization_users.user_id = auth.uid()
+      and organization_users.status = 'ACTIVE'
+    )
+  );
+
+drop policy if exists "School staff manage fee assignments" on public.school_student_fee_assignments;
+create policy "School staff manage fee assignments" on public.school_student_fee_assignments
+  for all using (
+    exists (
+      select 1 from public.organization_users
+      where organization_users.org_id = school_student_fee_assignments.org_id
+      and organization_users.user_id = auth.uid()
+      and organization_users.status = 'ACTIVE'
+    )
+  );

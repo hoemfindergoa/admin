@@ -25,7 +25,7 @@ export default async function DashboardRootPage() {
   // Orgs this user is a staff member of
   const { data: staffRows } = await supabase
     .from('organization_users')
-    .select('org_id, role, permissions, status, organizations(id, name, course_type, affiliation, email, phone, session_start_date, session_end_date)')
+    .select('org_id, role, permissions, status, organizations(id, name, course_type, affiliation, email, phone, session_start_date, session_end_date, logo_url)')
     .eq('user_id', user?.id ?? '')
     .eq('status', 'ACTIVE')
 
@@ -70,43 +70,112 @@ export default async function DashboardRootPage() {
   if (allOrgs.length === 0 && user) {
     const crmAccess = await getCrmAccess(user.id)
     if (crmAccess.isCrmMember) redirect('/crm')
-    const { data: teacherProfiles } = await supabase.from('school_teachers').select('org_id').eq('user_id', user.id).order('created_at').limit(1)
+    const { data: teacherProfiles } = await supabase.from('school_teachers').select('org_id').eq('user_id', user.id).eq('status', 'ACTIVE').order('created_at').limit(1)
     if (teacherProfiles?.[0]) redirect(`/teacher/${teacherProfiles[0].org_id}`)
   }
 
   return (
-    <div className="flex flex-col gap-8 w-full max-w-6xl mx-auto py-8">
+    <div className="flex flex-col gap-8 w-full max-w-[1800px] mx-auto py-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Your Franchises</h1>
-          <p className="text-muted-foreground mt-1">
+          <h1 className="text-3xl font-bold tracking-tight text-zinc-900">Your Franchises</h1>
+          <p className="text-[14px] text-zinc-500 mt-1 font-medium">
             Manage all your school branches from one central hub.
           </p>
         </div>
-        {isOwner && <div className="flex items-center gap-2"><Link href="/crm"><Button variant="outline">Switch to Sales CRM</Button></Link><CreateFranchiseSheet /></div>}
+        {isOwner && (
+          <div className="flex items-center gap-3">
+            <Link href="/crm">
+              <Button variant="outline" className="text-zinc-600 border-zinc-200 hover:bg-zinc-50 transition-colors shadow-sm font-semibold">
+                Switch to Sales CRM
+              </Button>
+            </Link>
+            <CreateFranchiseSheet />
+          </div>
+        )}
       </div>
 
-      {dashboardTotals && <Card><CardHeader><CardTitle>Franchise network totals</CardTitle><CardDescription>Live totals across the franchises you can access.</CardDescription></CardHeader><CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-lg border p-4"><div className="flex items-center justify-between text-sm text-muted-foreground">Students<GraduationCap className="h-4 w-4" /></div><p className="mt-2 text-2xl font-bold">{dashboardTotals.students ?? '—'}</p></div>
-        <div className="rounded-lg border p-4"><div className="flex items-center justify-between text-sm text-muted-foreground">Active teachers<Users className="h-4 w-4" /></div><p className="mt-2 text-2xl font-bold">{dashboardTotals.teachers ?? '—'}</p></div>
-        <div className="rounded-lg border p-4"><div className="flex items-center justify-between text-sm text-muted-foreground">Classes<BookOpen className="h-4 w-4" /></div><p className="mt-2 text-2xl font-bold">{dashboardTotals.classes ?? '—'}</p></div>
-        {dashboardTotals.financial && <div className="rounded-lg border p-4"><div className="flex items-center justify-between text-sm text-muted-foreground">Collected revenue<Banknote className="h-4 w-4" /></div><p className="mt-2 text-2xl font-bold">{money(dashboardTotals.revenue)}</p></div>}
-        {dashboardTotals.financial && dashboardTotals.revenue == null && <p className="text-xs text-amber-700 sm:col-span-2 lg:col-span-4">Apply the financial ledger section in schema_school_management.sql to enable recorded payment totals.</p>}
-      </CardContent></Card>}
+      {dashboardTotals && (
+        <div className="rounded-2xl border border-zinc-200 bg-white shadow-sm overflow-hidden">
+          <div className="border-b border-zinc-100 bg-zinc-50/50 px-6 py-5">
+            <h2 className="text-[16px] font-bold text-zinc-900 tracking-tight">Franchise network totals</h2>
+            <p className="text-[13px] text-zinc-500 mt-1 font-medium">Live totals across the franchises you can access.</p>
+          </div>
+          <div className="grid gap-0 sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-zinc-100">
+            {/* Students */}
+            <div className="p-6 bg-white hover:bg-zinc-50/50 transition-colors">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-100/80 text-indigo-600 shadow-sm ring-1 ring-indigo-200/50">
+                  <GraduationCap className="h-5 w-5" />
+                </div>
+                <div className="space-y-0.5 text-sm">
+                  <span className="text-[12px] font-semibold uppercase tracking-wider text-zinc-500">Students</span>
+                  <p className="text-2xl font-bold text-zinc-900 tracking-tight">{dashboardTotals.students ?? '—'}</p>
+                </div>
+              </div>
+            </div>
+            {/* Teachers */}
+            <div className="p-6 bg-white hover:bg-zinc-50/50 transition-colors">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-100/80 text-emerald-600 shadow-sm ring-1 ring-emerald-200/50">
+                  <Users className="h-5 w-5" />
+                </div>
+                <div className="space-y-0.5 text-sm">
+                  <span className="text-[12px] font-semibold uppercase tracking-wider text-zinc-500">Active Teachers</span>
+                  <p className="text-2xl font-bold text-zinc-900 tracking-tight">{dashboardTotals.teachers ?? '—'}</p>
+                </div>
+              </div>
+            </div>
+            {/* Classes */}
+            <div className="p-6 bg-white hover:bg-zinc-50/50 transition-colors">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-100/80 text-amber-600 shadow-sm ring-1 ring-amber-200/50">
+                  <BookOpen className="h-5 w-5" />
+                </div>
+                <div className="space-y-0.5 text-sm">
+                  <span className="text-[12px] font-semibold uppercase tracking-wider text-zinc-500">Classes</span>
+                  <p className="text-2xl font-bold text-zinc-900 tracking-tight">{dashboardTotals.classes ?? '—'}</p>
+                </div>
+              </div>
+            </div>
+            {/* Revenue */}
+            {dashboardTotals.financial && (
+              <div className="p-6 bg-white hover:bg-zinc-50/50 transition-colors">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-100/80 text-rose-600 shadow-sm ring-1 ring-rose-200/50">
+                    <Banknote className="h-5 w-5" />
+                  </div>
+                  <div className="space-y-0.5 text-sm">
+                    <span className="text-[12px] font-semibold uppercase tracking-wider text-zinc-500">Collected Revenue</span>
+                    <p className="text-2xl font-bold text-zinc-900 tracking-tight">{money(dashboardTotals.revenue)}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+            {dashboardTotals.financial && dashboardTotals.revenue == null && (
+              <div className="p-4 sm:col-span-2 lg:col-span-4 bg-amber-50 border-t border-amber-100">
+                <p className="text-[12px] font-medium text-amber-700">
+                  Apply the financial ledger section in schema_school_management.sql to enable recorded payment totals.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {allOrgs.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-24 text-center border-2 border-dashed rounded-xl bg-muted/10">
-          <div className="h-20 w-20 bg-muted rounded-full flex items-center justify-center mb-4">
-            <Building2 className="w-10 h-10 text-muted-foreground" />
+        <div className="flex flex-col items-center justify-center py-24 text-center border border-zinc-200 border-dashed rounded-2xl bg-zinc-50/50 shadow-sm">
+          <div className="h-16 w-16 bg-white rounded-2xl flex items-center justify-center mb-5 shadow-sm ring-1 ring-zinc-200">
+            <Building2 className="w-8 h-8 text-indigo-600" />
           </div>
-          <h2 className="text-2xl font-semibold tracking-tight">No franchises yet</h2>
-          <p className="text-muted-foreground mt-2 max-w-md">
+          <h2 className="text-xl font-bold tracking-tight text-zinc-900">No franchises yet</h2>
+          <p className="text-[14px] text-zinc-500 mt-2 max-w-sm font-medium">
             You haven't created any school franchises yet. Create your first organization to access the management dashboard.
           </p>
-          <div className="mt-8">
+          <div className="mt-6">
             <CreateFranchiseSheet
               trigger={
-                <Button size="lg" className="gap-2">
+                <Button size="lg" className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white shadow-md transition-colors rounded-full font-semibold px-6">
                   <Plus className="w-5 h-5" />
                   Create your first Franchise
                 </Button>
@@ -119,42 +188,55 @@ export default async function DashboardRootPage() {
           {allOrgs.map((org: any) => {
             const userOwnsOrg = ownedOrgIds.has(org.id)
             return (
-              <Card key={org.id} className="flex flex-col hover:border-primary/50 transition-colors">
-                <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
-                  <div className="space-y-1">
-                    <CardTitle className="text-xl font-semibold">{org.name}</CardTitle>
-                    <CardDescription>{org.course_type} • {org.affiliation || 'No Affiliation'}</CardDescription>
-                  </div>
-                  {userOwnsOrg && <EditFranchiseSheet org={org} />}
-              </CardHeader>
-                <CardContent className="flex-1 mt-4">
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div className="space-y-1">
-                      <span className="text-muted-foreground text-xs uppercase tracking-wider">Email</span>
-                      <p className="font-medium truncate">{org.email || 'N/A'}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <span className="text-muted-foreground text-xs uppercase tracking-wider">Phone</span>
-                      <p className="font-medium truncate">{org.phone || 'N/A'}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <span className="text-muted-foreground text-xs uppercase tracking-wider">Session Start</span>
-                      <p className="font-medium truncate">{org.session_start_date || 'N/A'}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <span className="text-muted-foreground text-xs uppercase tracking-wider">Session End</span>
-                      <p className="font-medium truncate">{org.session_end_date || 'N/A'}</p>
+              <div key={org.id} className="flex flex-col rounded-2xl border border-zinc-200 bg-white shadow-sm hover:shadow-md hover:border-zinc-300 transition-all overflow-hidden group">
+                <div className="flex flex-row items-start justify-between px-6 py-5 border-b border-zinc-100 bg-zinc-50/30">
+                  <div className="flex items-center gap-3">
+                    {org.logo_url ? (
+                      <img src={org.logo_url} alt={org.name} className="h-10 w-10 shrink-0 rounded-lg object-contain bg-white ring-1 ring-zinc-200/50 p-0.5" />
+                    ) : (
+                      <div className="h-10 w-10 shrink-0 rounded-lg bg-zinc-100 flex items-center justify-center ring-1 ring-zinc-200/50">
+                        <Building2 className="h-5 w-5 text-zinc-400" />
+                      </div>
+                    )}
+                    <div className="space-y-0.5">
+                      <h3 className="text-[17px] font-bold text-zinc-900 tracking-tight">{org.name}</h3>
+                      <p className="text-[13px] font-medium text-zinc-500">{org.course_type} • {org.affiliation || 'No Affiliation'}</p>
                     </div>
                   </div>
-                </CardContent>
-                <CardFooter className="pt-4 border-t">
+                  {userOwnsOrg && (
+                    <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                      <EditFranchiseSheet org={org} />
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1 px-6 py-5">
+                  <div className="grid grid-cols-2 gap-y-4 gap-x-4 text-sm">
+                    <div className="space-y-1">
+                      <span className="text-zinc-400 text-[10px] uppercase font-bold tracking-wider">Email</span>
+                      <p className="font-semibold text-zinc-700 truncate">{org.email || '—'}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-zinc-400 text-[10px] uppercase font-bold tracking-wider">Phone</span>
+                      <p className="font-semibold text-zinc-700 truncate">{org.phone || '—'}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-zinc-400 text-[10px] uppercase font-bold tracking-wider">Session Start</span>
+                      <p className="font-semibold text-zinc-700 truncate">{org.session_start_date || '—'}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-zinc-400 text-[10px] uppercase font-bold tracking-wider">Session End</span>
+                      <p className="font-semibold text-zinc-700 truncate">{org.session_end_date || '—'}</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="px-6 py-4 border-t border-zinc-100 bg-zinc-50/50">
                   <Link href={`/dashboard/${org.id}`} className="w-full">
-                    <Button variant="secondary" className="w-full text-primary">
+                    <Button className="w-full bg-zinc-900 text-white hover:bg-zinc-800 transition-colors font-semibold rounded-xl">
                       Open Dashboard
                     </Button>
                   </Link>
-                </CardFooter>
-              </Card>
+                </div>
+              </div>
             )
           })}
         </div>

@@ -4,6 +4,7 @@ import { createClient } from '@/utils/supabase/server'
 import { cookies } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 import { getCrmAccess } from '@/utils/crm-access'
+import { createAdminClient } from '@/utils/supabase/admin'
 
 export async function getOrganizations() {
   const cookieStore = await cookies()
@@ -58,6 +59,34 @@ export async function createOrganization(formData: FormData) {
   const phone = formData.get('phone') as string
   const address = formData.get('address') as string
 
+  const logoFile = formData.get('logo_file') as File | null
+  let logo_url = null
+
+  if (logoFile && logoFile.size > 0) {
+    const ext = logoFile.name.split('.').pop()
+    const fileName = `new-${Date.now()}.${ext}` // temporary prefix until we have orgId, or better to generate an ID first. 
+    // Actually, createOrganization inserts and returns the ID. So let's insert first, then upload, then update?
+    // Let's just upload with a UUID or timestamp for now.
+    const uniqueId = crypto.randomUUID()
+    const finalFileName = `${uniqueId}.${ext}`
+    
+    const adminSupabase = createAdminClient()
+    const { data: uploadData, error: uploadError } = await adminSupabase.storage
+      .from('franchise_logos')
+      .upload(finalFileName, logoFile, { upsert: true })
+      
+    if (uploadError) {
+      console.error('Error uploading logo:', uploadError)
+      throw new Error('Failed to upload logo image. Make sure the bucket "franchise_logos" exists and is public.')
+    }
+    
+    const { data: publicUrlData } = adminSupabase.storage
+      .from('franchise_logos')
+      .getPublicUrl(finalFileName)
+      
+    logo_url = publicUrlData.publicUrl
+  }
+
   const { data, error } = await supabase
     .from('organizations')
     .insert([
@@ -71,6 +100,7 @@ export async function createOrganization(formData: FormData) {
         email,
         phone,
         address,
+        ...(logo_url !== null ? { logo_url } : {})
       }
     ])
     .select()
@@ -99,6 +129,29 @@ export async function updateOrganization(orgId: string, formData: FormData) {
   const email = formData.get('email') as string
   const phone = formData.get('phone') as string
   const address = formData.get('address') as string
+  
+  const logoFile = formData.get('logo_file') as File | null
+  let logo_url = formData.get('logo_url') as string | null
+
+  if (logoFile && logoFile.size > 0) {
+    const ext = logoFile.name.split('.').pop()
+    const fileName = `${orgId}-${Date.now()}.${ext}`
+    const adminSupabase = createAdminClient()
+    const { data: uploadData, error: uploadError } = await adminSupabase.storage
+      .from('franchise_logos')
+      .upload(fileName, logoFile, { upsert: true })
+      
+    if (uploadError) {
+      console.error('Error uploading logo:', uploadError)
+      throw new Error('Failed to upload logo image. Make sure the bucket "franchise_logos" exists and is public.')
+    }
+    
+    const { data: publicUrlData } = adminSupabase.storage
+      .from('franchise_logos')
+      .getPublicUrl(fileName)
+      
+    logo_url = publicUrlData.publicUrl
+  }
 
   const { data, error } = await supabase
     .from('organizations')
@@ -111,6 +164,7 @@ export async function updateOrganization(orgId: string, formData: FormData) {
       email,
       phone,
       address,
+      ...(logo_url !== null ? { logo_url } : {})
     })
     .eq('id', orgId)
     .eq('owner_id', user.id) // security check

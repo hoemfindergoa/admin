@@ -19,12 +19,20 @@ export default async function CrmWorkspaceLayout({
   const access = await getCrmAccess(user.id, workspaceId)
   if (!access.canAccessCrm) redirect('/crm')
 
+  const { count } = await supabase
+    .from('crm_activities')
+    .select('*', { count: 'exact', head: true })
+    .eq('crm_workspace_id', access.crmWorkspaceId)
+    .eq('owner_user_id', user.id)
+    .is('completed_at', null)
+
   return (
     <CrmShell
       workspaceId={workspaceId}
       isSuperAdmin={access.isSuperAdmin}
       role={access.crmUser?.role ?? 'SUPER_ADMIN'}
       name={access.crmUser?.name ?? user.user_metadata?.full_name ?? user.email ?? 'CRM user'}
+      notificationCount={count || 0}
     >
       {children}
     </CrmShell>

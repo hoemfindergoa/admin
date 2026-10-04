@@ -25,12 +25,13 @@ const personal = [
   ['place_of_birth', 'Place of birth'], ['identity_mark', 'Identity mark'], ['pen_no', 'PEN no.'], ['apaar_id', 'APAAR ID'], ['student_code', 'Student code'],
   ['religion', 'Religion', 'select:Hindu,Muslim,Christian,Sikh,Buddhist,Jain,Other'], ['birth_certificate', 'Birth Certificate'], ['admission_date', 'Admission Date', 'date'],
   ['aadhaar', 'Aadhaar'], ['pan', 'PAN'], ['blood_group', 'Blood Group', 'select:A+,A-,B+,B-,AB+,AB-,O+,O-'],
+  ['is_hostler', 'Is Hostler', 'select:Yes,No'], ['transport_available', 'Transport Available', 'select:Yes,No']
 ] as const
 const detailSections: Array<{ title: string; fields: Array<[string, string, string?]> }> = [
   { title: 'Address information', fields: [['address_line_1', 'Address line 1'], ['address_line_2', 'Address line 2'], ['city', 'City'], ['state', 'State'], ['postal_code', 'Postal code'], ['country', 'Country']] },
-  { title: 'Father details', fields: [['father_name', "Father's name"], ['father_phone', "Father's contact number"], ['father_qualification', 'Educational qualification'], ['father_occupation', 'Occupation'], ['father_annual_income', 'Annual income', 'number'], ['father_office_phone', 'Office contact number'], ['father_aadhaar', 'Aadhaar']] },
-  { title: 'Mother details', fields: [['mother_name', "Mother's name"], ['mother_phone', "Mother's contact number"], ['mother_qualification', 'Educational qualification'], ['mother_occupation', 'Occupation'], ['mother_annual_income', 'Annual income', 'number'], ['mother_office_phone', 'Office contact number'], ['mother_aadhaar', 'Aadhaar']] },
-  { title: 'Guardian and emergency contact', fields: [['guardian_name', 'Guardian name'], ['guardian_phone', 'Guardian contact number'], ['guardian_email', 'Guardian email'], ['guardian_relation', 'Relationship'], ['guardian_address', 'Guardian address'], ['emergency_contact', 'Emergency contact number']] },
+  { title: 'Father details', fields: [['father_name', "Father's name"], ['father_phone', "Father's contact number"], ['father_email', "Father's email", 'email'], ['father_qualification', 'Educational qualification'], ['father_occupation', 'Occupation'], ['father_annual_income', 'Annual income', 'number'], ['father_office_phone', 'Office contact number'], ['father_aadhaar', 'Aadhaar']] },
+  { title: 'Mother details', fields: [['mother_name', "Mother's name"], ['mother_phone', "Mother's contact number"], ['mother_email', "Mother's email", 'email'], ['mother_qualification', 'Educational qualification'], ['mother_occupation', 'Occupation'], ['mother_annual_income', 'Annual income', 'number'], ['mother_office_phone', 'Office contact number'], ['mother_aadhaar', 'Aadhaar']] },
+  { title: 'Guardian and emergency contact', fields: [['guardian_name', 'Guardian name'], ['guardian_phone', 'Guardian contact number'], ['guardian_email', 'Guardian email', 'email'], ['guardian_relation', 'Relationship'], ['guardian_address', 'Guardian address'], ['emergency_contact', 'Emergency contact number']] },
   { title: 'Previous school and support', fields: [['previous_organization', 'Previous organization'], ['previous_institute', 'Last institute attended'], ['tc_number', 'TC number'], ['previous_class', 'Previous class'], ['previous_percentage', 'Previous percentage', 'number'], ['special_needs', 'Special needs']] },
 ]
 

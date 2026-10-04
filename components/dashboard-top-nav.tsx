@@ -18,16 +18,18 @@ import { cn } from "@/lib/utils"
 interface OrgOption {
   id: string
   name: string
+  logo_url?: string | null
 }
 
 interface DashboardTopNavProps {
   orgId: string
   orgName?: string
+  orgLogo?: string | null
   allOrgs?: OrgOption[]
   isSuperAdmin?: boolean
 }
 
-export function DashboardTopNav({ orgId, orgName = "Franchise", allOrgs = [], isSuperAdmin = false }: DashboardTopNavProps) {
+export function DashboardTopNav({ orgId, orgName = "Franchise", orgLogo = null, allOrgs = [], isSuperAdmin = false }: DashboardTopNavProps) {
   const router = useRouter()
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -40,15 +42,21 @@ export function DashboardTopNav({ orgId, orgName = "Franchise", allOrgs = [], is
   }
 
   return (
-    <header className="flex h-14 items-center gap-4 border-b bg-background px-6 shrink-0">
+    <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b border-zinc-200/80 bg-white/90 px-4 sm:px-6 shrink-0 backdrop-blur-md">
       <div className="flex flex-1 items-center gap-4">
         {/* ── Franchise Switcher ── */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="h-8 gap-2 border-dashed max-w-[260px]">
-              <Building2 className="h-4 w-4 shrink-0 text-muted-foreground" />
-              <span className="font-medium text-sm truncate hidden sm:inline-block">{orgName}</span>
-              <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <Button variant="outline" size="sm" className="h-9 gap-2.5 border-zinc-200 bg-white hover:bg-zinc-50 hover:text-zinc-900 shadow-sm max-w-[260px] rounded-lg pl-2">
+              {orgLogo ? (
+                <img src={orgLogo} alt={orgName} className="h-5 w-5 shrink-0 rounded object-contain bg-zinc-50 border border-zinc-100" />
+              ) : (
+                <div className="h-5 w-5 shrink-0 rounded bg-zinc-100 flex items-center justify-center border border-zinc-200">
+                  <Building2 className="h-3 w-3 text-zinc-500" />
+                </div>
+              )}
+              <span className="font-semibold text-[13px] text-zinc-900 truncate hidden sm:inline-block">{orgName}</span>
+              <ChevronDown className="h-3.5 w-3.5 shrink-0 text-zinc-400 ml-1" />
             </Button>
           </DropdownMenuTrigger>
 
@@ -76,11 +84,15 @@ export function DashboardTopNav({ orgId, orgName = "Franchise", allOrgs = [], is
                       if (!isCurrent) router.push(`/dashboard/${o.id}`)
                     }}
                   >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <Building2 className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                      <span className="truncate text-sm">{o.name}</span>
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      {o.logo_url ? (
+                        <img src={o.logo_url} alt={o.name} className="h-4 w-4 shrink-0 rounded object-contain" />
+                      ) : (
+                        <Building2 className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      )}
+                      <span className="truncate text-[13px] font-medium">{o.name}</span>
                     </div>
-                    {isCurrent && <Check className="h-4 w-4 shrink-0 text-primary" />}
+                    {isCurrent && <Check className="h-4 w-4 shrink-0 text-indigo-600" />}
                   </DropdownMenuItem>
                 )
               })
@@ -100,26 +112,30 @@ export function DashboardTopNav({ orgId, orgName = "Franchise", allOrgs = [], is
         </DropdownMenu>
       </div>
 
-      <div className="flex items-center gap-4">
-        {isSuperAdmin && <Button asChild variant="outline" size="sm" className="h-8"><Link href="/crm">Sales CRM</Link></Button>}
+      <div className="flex items-center gap-3">
+        {isSuperAdmin && (
+          <Button asChild variant="outline" size="sm" className="h-8 text-[13px] font-medium border-zinc-200 hover:bg-zinc-50 hover:text-zinc-900 transition-colors hidden sm:flex">
+            <Link href="/crm">Sales CRM</Link>
+          </Button>
+        )}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="h-8 gap-2">
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-              <span className="font-medium text-sm hidden sm:inline-block">2025-2026</span>
-              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+            <Button variant="outline" size="sm" className="h-8 gap-1.5 border-zinc-200 bg-white hover:bg-zinc-50 hover:text-zinc-900 shadow-sm rounded-lg px-2.5">
+              <Calendar className="h-3.5 w-3.5 text-zinc-500" />
+              <span className="font-semibold text-[12px] text-zinc-900 hidden sm:inline-block">2025-2026</span>
+              <ChevronDown className="h-3.5 w-3.5 text-zinc-400" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem>2025-2026</DropdownMenuItem>
-            <DropdownMenuItem>2026-2027</DropdownMenuItem>
+          <DropdownMenuContent align="end" className="w-36">
+            <DropdownMenuItem className="text-[13px]">2025-2026</DropdownMenuItem>
+            <DropdownMenuItem className="text-[13px]">2026-2027</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full bg-secondary">
-              <User className="h-4 w-4 text-secondary-foreground" />
+            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full bg-zinc-100 hover:bg-zinc-200 border border-zinc-200 ring-1 ring-white">
+              <User className="h-4 w-4 text-zinc-600" />
               <span className="sr-only">Toggle user menu</span>
             </Button>
           </DropdownMenuTrigger>

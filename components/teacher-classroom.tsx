@@ -36,8 +36,8 @@ export function TeacherClassroom({ orgId, data }: { orgId: string; data: any }) 
     })
   }
 
-  return <main className="min-h-screen bg-muted/30"><header className="border-b bg-background"><div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4"><div><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Teacher portal · {data.orgName}</p><h1 className="mt-1 text-xl font-semibold">Welcome, {data.teacher.name}</h1></div><span className="rounded-md bg-muted px-3 py-1.5 text-xs font-medium">Teacher</span></div></header>
-    <div className="mx-auto max-w-6xl space-y-6 px-4 py-6"><div className="grid gap-4 sm:grid-cols-3"><Card><CardContent className="flex items-center gap-3 p-4"><School className="h-5 w-5 text-muted-foreground" /><div><p className="text-xl font-semibold">{data.classes.length}</p><p className="text-xs text-muted-foreground">Assigned classes</p></div></CardContent></Card><Card><CardContent className="flex items-center gap-3 p-4"><GraduationCap className="h-5 w-5 text-muted-foreground" /><div><p className="text-xl font-semibold">{data.students.length}</p><p className="text-xs text-muted-foreground">Assigned students</p></div></CardContent></Card><Card><CardContent className="flex items-center gap-3 p-4"><BookOpen className="h-5 w-5 text-muted-foreground" /><div><p className="text-xl font-semibold">{data.subjects.length}</p><p className="text-xs text-muted-foreground">Assigned subjects</p></div></CardContent></Card></div>
+  return <div className="space-y-6">
+    <div className="mx-auto max-w-6xl space-y-6 px-4"><div className="grid gap-4 sm:grid-cols-3"><Card><CardContent className="flex items-center gap-3 p-4"><School className="h-5 w-5 text-muted-foreground" /><div><p className="text-xl font-semibold">{data.classes.length}</p><p className="text-xs text-muted-foreground">Assigned classes</p></div></CardContent></Card><Card><CardContent className="flex items-center gap-3 p-4"><GraduationCap className="h-5 w-5 text-muted-foreground" /><div><p className="text-xl font-semibold">{data.students.length}</p><p className="text-xs text-muted-foreground">Assigned students</p></div></CardContent></Card><Card><CardContent className="flex items-center gap-3 p-4"><BookOpen className="h-5 w-5 text-muted-foreground" /><div><p className="text-xl font-semibold">{data.subjects.length}</p><p className="text-xs text-muted-foreground">Assigned subjects</p></div></CardContent></Card></div>
       {error && <p role="alert" className="rounded-md border border-destructive/20 bg-background px-4 py-3 text-sm text-destructive">{error}</p>}{notice && <p role="status" className="rounded-md border border-emerald-200 bg-background px-4 py-3 text-sm text-emerald-700">{notice}</p>}
       {data.classes.length === 0 && <Card><CardContent className="p-8 text-center text-sm text-muted-foreground">No classes have been assigned to you yet. Ask your franchise admin to assign a class or subject.</CardContent></Card>}
       <div className="grid gap-5 xl:grid-cols-2">{data.classes.map((schoolClass: any) => {
@@ -54,5 +54,5 @@ export function TeacherClassroom({ orgId, data }: { orgId: string; data: any }) 
         }) : <p className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">No students in this class yet.</p>}</CardContent></Card>
       })}</div>
     </div>
-  </main>
+  </div>
 }

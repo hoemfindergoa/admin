@@ -44,10 +44,10 @@ export async function getStudentWorkspace(orgId: string) {
 const studentDetailKeys = [
   'caste', 'nationality', 'place_of_birth', 'identity_mark', 'pen_no', 'apaar_id', 'student_code', 'religion',
   'birth_certificate', 'aadhaar', 'pan', 'blood_group', 'address_line_1', 'address_line_2', 'city', 'state', 'postal_code', 'country',
-  'father_name', 'father_phone', 'father_qualification', 'father_occupation', 'father_annual_income', 'father_office_phone', 'father_aadhaar',
-  'mother_name', 'mother_phone', 'mother_qualification', 'mother_occupation', 'mother_annual_income', 'mother_office_phone', 'mother_aadhaar',
+  'father_name', 'father_phone', 'father_email', 'father_qualification', 'father_occupation', 'father_annual_income', 'father_office_phone', 'father_aadhaar',
+  'mother_name', 'mother_phone', 'mother_email', 'mother_qualification', 'mother_occupation', 'mother_annual_income', 'mother_office_phone', 'mother_aadhaar',
   'guardian_relation', 'guardian_address', 'emergency_contact', 'admission_date', 'previous_organization', 'previous_institute', 'tc_number',
-  'previous_class', 'previous_percentage', 'special_needs',
+  'previous_class', 'previous_percentage', 'special_needs', 'is_hostler', 'transport_available'
 ] as const
 
 function readJsonField<T>(formData: FormData, key: string, fallback: T): T {
@@ -142,8 +142,19 @@ export async function saveStudent(orgId: string, formData: FormData) {
   const guardianEmail = payload.guardian_email
   if (guardianEmail) {
     try { await linkOrInviteParent(admin, orgId, savedId, guardianEmail, payload.guardian_name || guardianEmail, payload.guardian_phone) }
-    catch (cause) { warnings.push(`Parent account could not be linked or invited: ${cause instanceof Error ? cause.message : 'Unknown error'}`) }
+    catch (cause) { warnings.push(`Guardian account could not be linked or invited: ${cause instanceof Error ? cause.message : 'Unknown error'}`) }
   }
+  const fatherEmail = detail.father_email?.toLowerCase()
+  if (fatherEmail) {
+    try { await linkOrInviteParent(admin, orgId, savedId, fatherEmail, detail.father_name || fatherEmail, detail.father_phone || null) }
+    catch (cause) { warnings.push(`Father account could not be linked or invited: ${cause instanceof Error ? cause.message : 'Unknown error'}`) }
+  }
+  const motherEmail = detail.mother_email?.toLowerCase()
+  if (motherEmail) {
+    try { await linkOrInviteParent(admin, orgId, savedId, motherEmail, detail.mother_name || motherEmail, detail.mother_phone || null) }
+    catch (cause) { warnings.push(`Mother account could not be linked or invited: ${cause instanceof Error ? cause.message : 'Unknown error'}`) }
+  }
+  
   revalidatePath(`/dashboard/${orgId}/students`)
   return { id: savedId, updatedAt: new Date().toISOString(), updatedBy: user.email ?? 'School staff', warning: warnings.length ? `Student saved. ${warnings.join(' ')}` : null }
 }

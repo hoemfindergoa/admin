@@ -26,13 +26,14 @@ export async function getFinanceWorkspace(orgId: string, kind: FinanceKind) {
   await getFinanceAccess(orgId, kind)
   const admin = createAdminClient()
   if (kind === 'fees') {
-    const [{ data: students, error: studentsError }, { data: payments, error: paymentsError }] = await Promise.all([
+    const [{ data: students, error: studentsError }, { data: payments, error: paymentsError }, { data: classes }] = await Promise.all([
       admin.from('students').select('id, student_name, admission_number, class_id, section_id').eq('org_id', orgId).order('student_name'),
-      admin.from('school_fee_payments').select('id, student_id, amount, payment_date, payment_method, reference_number, notes, recorded_by_email').eq('org_id', orgId).order('payment_date', { ascending: false }),
+      admin.from('school_fee_payments').select('id, student_id, amount, payment_date, payment_method, reference_number, notes, recorded_by_email, for_month, fee_structure_id').eq('org_id', orgId).order('payment_date', { ascending: false }),
+      admin.from('school_classes').select('id, name').eq('org_id', orgId).order('name')
     ])
     if (studentsError) throw new Error(studentsError.message)
-    if (paymentsError) return { students: students ?? [], payments: [], expenses: [], ledgerReady: false }
-    return { students: students ?? [], payments: payments ?? [], expenses: [], ledgerReady: true }
+    if (paymentsError) return { students: students ?? [], payments: [], classes: classes ?? [], expenses: [], ledgerReady: false }
+    return { students: students ?? [], payments: payments ?? [], classes: classes ?? [], expenses: [], ledgerReady: true }
   }
   const { data: expenses, error } = await admin.from('school_expenses').select('id, title, category, amount, expense_date, payment_method, vendor, reference_number, notes, recorded_by_email').eq('org_id', orgId).order('expense_date', { ascending: false })
   if (error) return { students: [], payments: [], expenses: [], ledgerReady: false }
@@ -58,6 +59,8 @@ export async function recordFeePayment(orgId: string, formData: FormData) {
     org_id: orgId, student_id: studentId, amount, payment_date: paymentDate, payment_method: paymentMethod,
     reference_number: String(formData.get('reference_number') ?? '').trim() || null,
     notes: String(formData.get('notes') ?? '').trim() || null, recorded_by: user.id, recorded_by_email: user.email ?? null,
+    for_month: String(formData.get('for_month') ?? '').trim() || null,
+    fee_structure_id: formData.get('fee_structure_id') ? String(formData.get('fee_structure_id')) : null
   })
   if (error) throw new Error(error.message)
   revalidatePath(`/dashboard/${orgId}`)

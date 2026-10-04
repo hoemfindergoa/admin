@@ -28,13 +28,15 @@ interface Org {
   email?: string | null
   phone?: string | null
   address?: string | null
+  logo_url?: string | null
 }
 
 interface EditFranchiseSheetProps {
   org: Org
+  trigger?: React.ReactNode
 }
 
-export function EditFranchiseSheet({ org }: EditFranchiseSheetProps) {
+export function EditFranchiseSheet({ org, trigger }: EditFranchiseSheetProps) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
@@ -59,10 +61,14 @@ export function EditFranchiseSheet({ org }: EditFranchiseSheetProps) {
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" className="shrink-0 -mt-2 -mr-2">
-          <Settings className="w-4 h-4 text-muted-foreground" />
-          <span className="sr-only">Settings</span>
-        </Button>
+        {trigger ? (
+          trigger
+        ) : (
+          <Button variant="ghost" size="icon" className="shrink-0 -mt-2 -mr-2">
+            <Settings className="w-4 h-4 text-muted-foreground" />
+            <span className="sr-only">Settings</span>
+          </Button>
+        )}
       </SheetTrigger>
 
       <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
@@ -86,6 +92,28 @@ export function EditFranchiseSheet({ org }: EditFranchiseSheetProps) {
               defaultValue={org.name}
               disabled={isPending}
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="ef-logo">
+              Franchise Logo
+            </Label>
+            {org.logo_url && (
+              <div className="mb-2">
+                <img src={org.logo_url} alt="Current logo" className="h-12 w-12 rounded-lg object-contain bg-zinc-50 border border-zinc-200 p-1" />
+              </div>
+            )}
+            <Input
+              id="ef-logo"
+              name="logo_file"
+              type="file"
+              accept="image/*"
+              disabled={isPending}
+              className="cursor-pointer"
+            />
+            <p className="text-[11px] text-zinc-500">Upload a new image to replace the current logo.</p>
+            {/* We also pass the existing URL so the backend knows what to keep if no new file is uploaded */}
+            <input type="hidden" name="logo_url" value={org.logo_url || ''} />
           </div>
 
           <div className="grid grid-cols-2 gap-4">

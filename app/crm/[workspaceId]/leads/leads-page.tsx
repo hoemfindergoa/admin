@@ -2,12 +2,18 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { addLead, updateLeadStatus, deleteLead, addLeadRemark } from './actions'
+import { addLead, updateLeadStatus, deleteLead, addLeadRemark, assignLead } from './actions'
 import {
   Globe, Instagram, Facebook, Mail, Smartphone, Linkedin, Twitter,
   Plus, Trash2, ChevronDown, MessageSquare, Clock, CheckCircle2,
   PhoneCall, AlertCircle, Sparkles, X, History, User, Send
 } from 'lucide-react'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 const SOURCES = ['Website', 'Instagram', 'Facebook', 'LinkedIn', 'Twitter', 'Email', 'Phone', 'Referral', 'Walk-in', 'Other']
 const STATUSES = ['NEW', 'CONTACTED', 'QUALIFIED', 'PROPOSAL', 'NEGOTIATION', 'WON', 'LOST']
@@ -63,12 +69,14 @@ export function LeadsPage({
   leads,
   campaigns,
   notes = [],
+  members = [],
   access,
 }: {
   workspaceId: string
   leads: any[]
   campaigns: any[]
   notes?: any[]
+  members?: any[]
   access: any
 }) {
   const router = useRouter()
@@ -78,6 +86,7 @@ export function LeadsPage({
   const [showForm, setShowForm] = useState(false)
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState('ALL')
+  const [showDeleted, setShowDeleted] = useState(false)
 
   // Remarks Modal State
   const [activeRemarkLead, setActiveRemarkLead] = useState<any | null>(null)
@@ -118,6 +127,17 @@ export function LeadsPage({
         router.refresh()
       } catch (err: any) {
         setError(err.message ?? 'Failed to update status.')
+      }
+    })
+  }
+
+  function handleAssignChange(leadId: string, ownerUserId: string) {
+    startTransition(async () => {
+      try {
+        await assignLead(workspaceId, leadId, ownerUserId)
+        router.refresh()
+      } catch (err: any) {
+        setError(err.message ?? 'Failed to assign lead.')
       }
     })
   }
@@ -177,6 +197,8 @@ export function LeadsPage({
   }
 
   const filtered = leads.filter(lead => {
+    if (showDeleted) return lead.status === 'DELETED'
+    if (lead.status === 'DELETED') return false // Hide deleted leads in normal view
     const matchSearch = !search ||
       lead.company_name?.toLowerCase().includes(search.toLowerCase()) ||
       lead.contact_name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -196,13 +218,22 @@ export function LeadsPage({
           <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Leads & Follow-ups</h1>
           <p className="text-[13px] text-zinc-500 mt-1">Track prospective clients, follow-up status, and last activity remarks.</p>
         </div>
-        <button
-          onClick={() => { setShowForm(!showForm); setError(''); setSuccess('') }}
-          className="inline-flex items-center gap-2 rounded-full bg-indigo-600 px-5 py-2.5 text-[14px] font-semibold text-white shadow-md hover:bg-indigo-700 transition-all active:scale-95 cursor-pointer"
-        >
-          <Plus className="h-4 w-4" />
-          Add Lead
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowDeleted(!showDeleted)}
+            className={`inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-[14px] font-medium transition-all active:scale-95 cursor-pointer ${showDeleted ? 'bg-rose-100 text-rose-700 hover:bg-rose-200' : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200'}`}
+          >
+            <History className="h-4 w-4" />
+            {showDeleted ? 'Hide Deleted' : 'Show Deleted'}
+          </button>
+          <button
+            onClick={() => { setShowForm(!showForm); setError(''); setSuccess('') }}
+            className="inline-flex items-center gap-2 rounded-full bg-indigo-600 px-5 py-2.5 text-[14px] font-semibold text-white shadow-md hover:bg-indigo-700 transition-all active:scale-95 cursor-pointer"
+          >
+            <Plus className="h-4 w-4" />
+            Add Lead
+          </button>
+        </div>
       </div>
 
       {/* Alerts */}
@@ -272,6 +303,43 @@ export function LeadsPage({
                 />
               </div>
 
+              {/* City / Location */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[13px] font-semibold text-zinc-700">City / Location</label>
+                <input
+                  name="city_location"
+                  type="text"
+                  placeholder="e.g. Mumbai"
+                  className="h-10 rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-[14px] text-zinc-900 placeholder:text-zinc-400 focus:border-indigo-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                />
+              </div>
+
+              {/* Investment Budget */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[13px] font-semibold text-zinc-700">Investment Budget</label>
+                <input
+                  name="investment_budget"
+                  type="text"
+                  placeholder="e.g. 15-20 Lakhs"
+                  className="h-10 rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-[14px] text-zinc-900 placeholder:text-zinc-400 focus:border-indigo-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                />
+              </div>
+
+              {/* Owns Property */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[13px] font-semibold text-zinc-700">Do you own property?</label>
+                <select
+                  name="owns_property"
+                  defaultValue=""
+                  className="h-10 rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-[14px] text-zinc-900 focus:border-indigo-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                >
+                  <option value="" disabled>Select...</option>
+                  <option value="Yes">Yes</option>
+                  <option value="No">No</option>
+                  <option value="Leased">Leased / Rented</option>
+                </select>
+              </div>
+
               {/* Source */}
               <div className="flex flex-col gap-1.5">
                 <label className="text-[13px] font-semibold text-zinc-700">Lead Source</label>
@@ -293,6 +361,21 @@ export function LeadsPage({
                 >
                   <option value="">No Campaign</option>
                   {campaigns?.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+
+              {/* Assign To */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[13px] font-semibold text-zinc-700">Assign To</label>
+                <select
+                  name="owner_user_id"
+                  defaultValue={access.userId}
+                  className="h-10 rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-[14px] text-zinc-900 focus:border-indigo-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                >
+                  <option value={access.userId}>Assign to Me</option>
+                  {members?.filter(m => m.user_id !== access.userId).map(m => (
+                    <option key={m.user_id} value={m.user_id}>{m.name || m.email}</option>
+                  ))}
                 </select>
               </div>
 
@@ -338,18 +421,24 @@ export function LeadsPage({
             onChange={e => setSearch(e.target.value)}
             className="h-9.5 w-full max-w-md rounded-full border border-zinc-200 bg-white px-4 text-[13px] text-zinc-900 placeholder:text-zinc-400 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm transition-all"
           />
-          <select
-            value={filterStatus}
-            onChange={e => setFilterStatus(e.target.value)}
-            className="h-9.5 rounded-full border border-zinc-200 bg-white px-4 text-[13px] font-medium text-zinc-700 shadow-sm focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all cursor-pointer"
-          >
-            <option value="ALL">All Statuses ({leads.length})</option>
-            {STATUSES.map(s => (
-              <option key={s} value={s}>
-                {s.toLowerCase().replace('_', ' ')} ({leads.filter(l => l.status === s).length})
-              </option>
-            ))}
-          </select>
+          {!showDeleted && (
+            <DropdownMenu>
+              <DropdownMenuTrigger className="flex h-9.5 items-center gap-2 rounded-full border border-zinc-200 bg-white px-4 text-[13px] font-medium text-zinc-700 shadow-sm focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all cursor-pointer">
+                {filterStatus === 'ALL' ? 'All Statuses' : filterStatus.toLowerCase().replace('_', ' ')}
+                <ChevronDown className="h-4 w-4 opacity-50" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-[180px]">
+                <DropdownMenuItem onClick={() => setFilterStatus('ALL')} className="text-[13px] font-medium cursor-pointer py-2">
+                  All Statuses ({leads.length})
+                </DropdownMenuItem>
+                {STATUSES.map(s => (
+                  <DropdownMenuItem key={s} onClick={() => setFilterStatus(s)} className="text-[13px] font-medium cursor-pointer py-2">
+                    {s.toLowerCase().replace('_', ' ')} ({leads.filter(l => l.status === s).length})
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
         <p className="text-[12px] font-medium text-zinc-500">
           Showing {filtered.length} of {leads.length} leads
@@ -369,11 +458,12 @@ export function LeadsPage({
         ) : (
           <div className="divide-y divide-zinc-100">
             {/* Table Header */}
-            <div className="hidden lg:grid grid-cols-[1.8fr_1.3fr_2fr_1fr_120px_50px] gap-4 bg-zinc-50/80 px-6 py-3.5 text-[11px] font-bold uppercase tracking-widest text-zinc-400">
+            <div className="hidden lg:grid grid-cols-[1.6fr_1.3fr_2fr_100px_130px_120px_50px] gap-4 bg-zinc-50/80 px-6 py-3.5 text-[11px] font-bold uppercase tracking-widest text-zinc-400">
               <span>Company / Contact</span>
               <span>Email / Phone</span>
               <span>Last Remark & Follow-up</span>
               <span>Source</span>
+              <span>Assignee</span>
               <span>Status</span>
               <span></span>
             </div>
@@ -386,7 +476,12 @@ export function LeadsPage({
               return (
                 <div
                   key={lead.id}
-                  className="grid grid-cols-1 lg:grid-cols-[1.8fr_1.3fr_2fr_1fr_120px_50px] gap-3 lg:gap-4 px-6 py-4 hover:bg-zinc-50/60 transition-colors items-start lg:items-center"
+                  onClick={() => {
+                    setActiveRemarkLead(lead)
+                    setNewStatus(lead.status)
+                    setCustomRemark('')
+                  }}
+                  className="grid grid-cols-1 lg:grid-cols-[1.6fr_1.3fr_2fr_100px_130px_120px_50px] gap-3 lg:gap-4 px-6 py-4 hover:bg-zinc-50/60 transition-colors items-start lg:items-center cursor-pointer"
                 >
                   {/* Company + Contact */}
                   <div>
@@ -411,13 +506,14 @@ export function LeadsPage({
                   <div className="flex flex-col gap-1">
                     {latest ? (
                       <div
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation()
                           setActiveRemarkLead(lead)
                           setNewStatus(lead.status)
-                          setCustomRemark('')
+                          setCustomRemark(latest.body || '')
                         }}
-                        className="group/remark flex items-start gap-2 rounded-xl bg-zinc-50/80 border border-zinc-200/80 p-2 text-left cursor-pointer hover:bg-indigo-50/40 hover:border-indigo-200 transition-all"
-                        title="Click to view history or add a new remark"
+                        className="group/remark flex items-start gap-2 rounded-xl bg-zinc-50/80 border border-zinc-200/80 p-2 text-left hover:bg-indigo-50/40 hover:border-indigo-200 transition-all"
+                        title="Click to view history or edit remark"
                       >
                         <MessageSquare className="h-3.5 w-3.5 mt-0.5 text-indigo-500 shrink-0" />
                         <div className="flex-1 min-w-0">
@@ -429,6 +525,11 @@ export function LeadsPage({
                               <span className="flex items-center gap-1">
                                 <Clock className="h-2.5 w-2.5" />
                                 {timeAgo}
+                              </span>
+                            )}
+                            {latest.created_by_email && (
+                              <span className="text-zinc-500 font-semibold ml-1">
+                                • {latest.created_by_email.split('@')[0]}
                               </span>
                             )}
                             {all.length > 1 && (
@@ -458,27 +559,59 @@ export function LeadsPage({
                   </div>
 
                   {/* Source */}
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
                     <SourceIcon source={lead.source} />
                     <span className="text-[12px] text-zinc-500">{lead.source || 'Website'}</span>
                   </div>
 
+                  {/* Assignee dropdown */}
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger
+                        disabled={pending || (!access.isSuperAdmin && access.role !== 'SALES_MANAGER' && access.role !== 'CRM_ADMIN' && lead.owner_user_id !== access.userId)}
+                        className="flex w-full max-w-[130px] items-center justify-between rounded-lg border-zinc-200 bg-zinc-50/50 px-2 py-1 text-[12px] font-medium text-zinc-700 hover:bg-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <span className="truncate">
+                          {lead.owner_user_id ? members?.find(m => m.user_id === lead.owner_user_id)?.name || 'Unknown' : 'Unassigned'}
+                        </span>
+                        <ChevronDown className="ml-1 h-3 w-3 shrink-0 opacity-50" />
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-[180px] p-1 shadow-lg border-zinc-200">
+                        {members?.map(m => (
+                          <DropdownMenuItem key={m.user_id} onClick={() => handleAssignChange(lead.id, m.user_id)} className="text-[13px] font-medium cursor-pointer py-2">
+                            {m.name || m.email}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+
                   {/* Status dropdown */}
-                  <div>
-                    <select
-                      value={lead.status}
-                      onChange={e => handleStatusChange(lead.id, e.target.value)}
-                      disabled={pending}
-                      className={`rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wide border-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500/30 ${statusColors[lead.status] ?? 'bg-zinc-100 text-zinc-600'}`}
-                    >
-                      {STATUSES.map(s => (
-                        <option key={s} value={s}>{s.toLowerCase().replace('_', ' ')}</option>
-                      ))}
-                    </select>
+                  <div onClick={(e) => e.stopPropagation()}>
+                    {lead.status === 'DELETED' ? (
+                      <span className="rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wide border-0 bg-rose-100 text-rose-700">Deleted</span>
+                    ) : (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger
+                          disabled={pending}
+                          className={`flex items-center gap-1 rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wide border-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500/30 ${statusColors[lead.status] ?? 'bg-zinc-100 text-zinc-600'}`}
+                        >
+                          {lead.status.toLowerCase().replace('_', ' ')}
+                          <ChevronDown className="h-3 w-3 opacity-70" />
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="p-1 shadow-lg border-zinc-200 min-w-[120px]">
+                          {STATUSES.map(s => (
+                            <DropdownMenuItem key={s} onClick={() => handleStatusChange(lead.id, s)} className="text-[12px] font-semibold uppercase tracking-wider cursor-pointer py-2">
+                              {s.toLowerCase().replace('_', ' ')}
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
                   </div>
 
                   {/* Actions */}
-                  <div className="flex justify-end items-center gap-1">
+                  <div className="flex justify-end items-center gap-1" onClick={(e) => e.stopPropagation()}>
                     <button
                       onClick={() => handleDelete(lead.id)}
                       disabled={pending}
@@ -500,11 +633,20 @@ export function LeadsPage({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-xs animate-in fade-in duration-150">
           <div className="relative w-full max-w-lg rounded-3xl bg-white shadow-2xl border border-zinc-100 overflow-hidden animate-in zoom-in-95 duration-150">
             {/* Modal Header */}
-            <div className="border-b border-zinc-100 bg-zinc-50/70 px-6 py-4 flex items-center justify-between">
-              <div>
-                <p className="text-[11px] font-bold uppercase tracking-widest text-indigo-600">Lead Follow-up & Remarks</p>
-                <h3 className="text-lg font-bold text-zinc-900 mt-0.5">{activeRemarkLead.company_name}</h3>
-                <p className="text-[12px] text-zinc-500">Contact: {activeRemarkLead.contact_name} {activeRemarkLead.phone ? `(${activeRemarkLead.phone})` : ''}</p>
+            <div className="border-b border-zinc-100 bg-zinc-50/70 px-6 py-4 flex items-start justify-between">
+              <div className="flex-1 pr-4">
+                <p className="text-[11px] font-bold uppercase tracking-widest text-indigo-600 mb-1">Lead Details & History</p>
+                <h3 className="text-xl font-bold text-zinc-900">{activeRemarkLead.company_name}</h3>
+                <p className="text-[13px] font-medium text-zinc-600 mt-0.5">Contact: {activeRemarkLead.contact_name}</p>
+                
+                <div className="mt-4 grid grid-cols-2 gap-y-3 gap-x-4 text-[12px] text-zinc-700 bg-white shadow-sm ring-1 ring-zinc-200/50 p-3.5 rounded-xl">
+                  <div className="flex flex-col"><span className="text-[10px] uppercase font-bold text-zinc-400 mb-0.5">Email</span><span className="font-semibold truncate">{activeRemarkLead.email || '—'}</span></div>
+                  <div className="flex flex-col"><span className="text-[10px] uppercase font-bold text-zinc-400 mb-0.5">Phone</span><span className="font-semibold truncate">{activeRemarkLead.phone || '—'}</span></div>
+                  <div className="flex flex-col"><span className="text-[10px] uppercase font-bold text-zinc-400 mb-0.5">Location</span><span className="font-semibold truncate">{activeRemarkLead.city_location || '—'}</span></div>
+                  <div className="flex flex-col"><span className="text-[10px] uppercase font-bold text-zinc-400 mb-0.5">Budget</span><span className="font-semibold truncate">{activeRemarkLead.investment_budget || '—'}</span></div>
+                  <div className="flex flex-col"><span className="text-[10px] uppercase font-bold text-zinc-400 mb-0.5">Property</span><span className="font-semibold truncate">{activeRemarkLead.owns_property || '—'}</span></div>
+                  <div className="flex flex-col"><span className="text-[10px] uppercase font-bold text-zinc-400 mb-0.5">Source</span><span className="font-semibold truncate">{activeRemarkLead.source || '—'}</span></div>
+                </div>
               </div>
               <button
                 onClick={() => setActiveRemarkLead(null)}

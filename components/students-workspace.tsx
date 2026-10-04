@@ -3,11 +3,12 @@
 import { ChangeEvent, useEffect, useMemo, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Download, FileSpreadsheet, GraduationCap, Pencil, Plus, Upload } from 'lucide-react'
+import { Download, FileSpreadsheet, GraduationCap, Pencil, Plus, Upload, Search, Filter, Home, User, FileText, Calendar, Wallet } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { assignStudent, importStudents } from '@/app/dashboard/[orgId]/students/actions'
 import { StudentEditorSheet } from '@/components/student-editor-sheet'
 
@@ -112,6 +113,10 @@ export function StudentsWorkspace({ orgId, students: initialStudents, classes, s
   const [bulkOpen, setBulkOpen] = useState(false)
   const [editorOpen, setEditorOpen] = useState(false)
   const [editing, setEditing] = useState<Student | null>(null)
+  const [viewing, setViewing] = useState<Student | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [classFilter, setClassFilter] = useState('all')
+  const [hostlerFilter, setHostlerFilter] = useState('all')
   const [assignments, setAssignments] = useState<Record<string, { classId: string; sectionId: string }>>({})
   const [isPending, startTransition] = useTransition()
   const router = useRouter()
@@ -148,7 +153,7 @@ export function StudentsWorkspace({ orgId, students: initialStudents, classes, s
   }
 
   return <div className="space-y-6">
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><h1 className="text-3xl font-bold tracking-tight">Students</h1><p className="mt-1 text-muted-foreground">Create and update student records, families, and class assignments.</p></div><div className="flex gap-2"><Button variant="outline" asChild><Link href={`/dashboard/${orgId}/school`}>Manage classes and sections</Link></Button><details className="relative"><summary className="flex h-10 cursor-pointer list-none items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground"><Plus className="mr-2 h-4 w-4" />Add student</summary><div className="absolute right-0 z-20 mt-2 w-52 rounded-md border bg-popover p-1 shadow-lg"><button className="w-full rounded px-3 py-2 text-left text-sm hover:bg-accent" onClick={() => { setEditing(null); setEditorOpen(true) }}>Add single student</button><button className="w-full rounded px-3 py-2 text-left text-sm hover:bg-accent" onClick={() => setBulkOpen((value) => !value)}>Bulk upload</button></div></details></div></div>
+    <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><h1 className="text-3xl font-bold tracking-tight">Students</h1><p className="mt-1 text-muted-foreground">Create and update student records, families, and class assignments.</p></div><div className="flex gap-2"><Button variant="outline" asChild><Link href={`/dashboard/${orgId}/school`}>Manage classes and sections</Link></Button><details className="relative"><summary className="flex h-10 cursor-pointer list-none items-center rounded-md bg-emerald-600 hover:bg-emerald-700 px-4 text-sm font-semibold text-white"><Plus className="mr-2 h-4 w-4" />Add student</summary><div className="absolute right-0 z-20 mt-2 w-52 rounded-md border bg-popover p-1 shadow-lg"><button className="w-full rounded px-3 py-2 text-left text-sm hover:bg-accent" onClick={() => { setEditing(null); setEditorOpen(true) }}>Add single student</button><button className="w-full rounded px-3 py-2 text-left text-sm hover:bg-accent" onClick={() => setBulkOpen((value) => !value)}>Bulk upload</button></div></details></div></div>
     {bulkOpen && <Card><CardHeader><CardTitle className="flex items-center gap-2"><Upload className="h-5 w-5" />Bulk upload students</CardTitle><CardDescription>Upload an Excel workbook (.xlsx) or CSV with class and section names that already exist in Manage School. Add profile pictures after import by editing the student.</CardDescription></CardHeader><CardContent className="space-y-4">
       <div className="flex flex-wrap gap-2"><Button size="sm" variant="outline" asChild><a href="/student-import-template.csv" download><Download className="mr-2 h-4 w-4" />Download template</a></Button><span className="self-center text-xs text-muted-foreground">Up to 500 students · siblings and concessions columns use JSON lists</span></div>
       <div className="space-y-2"><Label htmlFor="student-file">Excel or CSV file</Label><Input id="student-file" type="file" accept=".xlsx,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={handleFile} /></div>
@@ -156,10 +161,154 @@ export function StudentsWorkspace({ orgId, students: initialStudents, classes, s
       {rows.length > 0 && <><div className="max-h-52 overflow-auto rounded-md border"><table className="w-full text-xs"><thead className="bg-muted"><tr>{['Student', 'Class', 'Section'].map((header) => <th key={header} className="p-2 text-left">{header}</th>)}</tr></thead><tbody>{rows.slice(0, 8).map((row, i) => <tr key={i} className="border-t"><td className="p-2">{row.student_name || <span className="text-destructive">Missing name</span>}</td><td className="p-2">{row.class}</td><td className="p-2">{row.section}</td></tr>)}</tbody></table></div><Button onClick={doImport} disabled={isPending || classes.length === 0 || sections.length === 0}>{isPending ? 'Importing…' : `Import ${rows.length} students`}</Button></>}
       {classes.length === 0 && <p className="text-sm text-amber-700">Add classes and sections before importing students.</p>}
     </CardContent></Card>}
-    <Card><CardHeader><CardTitle className="flex items-center gap-2"><GraduationCap className="h-5 w-5" />School roster</CardTitle><CardDescription>{students.length} students · update class and section assignments here.</CardDescription></CardHeader><CardContent>
-      {!students.length ? <div className="rounded-md border border-dashed p-8 text-center text-sm text-muted-foreground">No students yet. Choose Add student to create one or upload a roster.</div> : <div className="max-h-[500px] overflow-auto rounded-md border"><table className="w-full text-sm"><thead className="sticky top-0 bg-muted"><tr><th className="p-3 text-left">Student</th><th className="p-3 text-left">Admission no.</th><th className="p-3 text-left">Class / section</th><th className="p-3"></th><th className="p-3"></th></tr></thead><tbody>{students.map((student) => { const value = assignments[student.id] ?? { classId: student.class_id, sectionId: student.section_id }; const choices = sectionsByClass[value.classId] ?? []; const detail = details.find((item) => item.student_id === student.id); const updatedAt = [student.updated_at, detail?.updated_at].filter(Boolean).reduce((latest: string | undefined, value: string | undefined) => value && (!latest || value > latest) ? value : latest, ''); const updatedBy = updatedAt === detail?.updated_at ? detail?.updated_by_email : student.updated_by_email; return <tr key={student.id} className="border-t"><td className="p-3 font-medium">{student.student_name}<div className="text-xs font-normal text-muted-foreground">{updatedAt ? `Updated ${new Date(updatedAt).toLocaleString()}${updatedBy ? ` · ${updatedBy}` : ''}` : 'No detail updates yet'}</div></td><td className="p-3 text-muted-foreground">{student.admission_number || '—'}</td><td className="min-w-[260px] p-3"><div className="flex gap-2"><select aria-label={`Class for ${student.student_name}`} className="h-9 min-w-28 rounded-md border bg-background px-2 text-xs" value={value.classId} onChange={(event) => { const classId = event.target.value; setAssignments((current) => ({ ...current, [student.id]: { classId, sectionId: sectionsByClass[classId]?.[0]?.id ?? '' } })) }}>{classes.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><select aria-label={`Section for ${student.student_name}`} className="h-9 min-w-24 rounded-md border bg-background px-2 text-xs" value={value.sectionId} onChange={(event) => setAssignments((current) => ({ ...current, [student.id]: { ...value, sectionId: event.target.value } }))}>{choices.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></div></td><td className="p-3"><Button size="sm" variant="outline" disabled={isPending || !value.sectionId || (value.classId === student.class_id && value.sectionId === student.section_id)} onClick={() => saveAssignment(student)}>Save</Button></td><td className="p-3"><Button size="sm" variant="ghost" onClick={() => { setEditing(student); setEditorOpen(true) }}><Pencil className="mr-1 h-4 w-4" />Edit</Button></td></tr> })}</tbody></table></div>}
+    <Card>
+      <CardHeader>
+        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+          <div>
+            <CardTitle className="flex items-center gap-2"><GraduationCap className="h-5 w-5 text-indigo-600" />School roster</CardTitle>
+            <CardDescription>{students.length} students · click on a student to view their full profile.</CardDescription>
+          </div>
+          <div className="flex flex-col sm:flex-row items-center gap-3">
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-zinc-500" />
+              <Input placeholder="Search students..." className="pl-9 bg-zinc-50 border-zinc-200" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+            </div>
+            <select className="h-10 rounded-md border border-zinc-200 bg-white px-3 text-sm font-medium shadow-sm min-w-32" value={classFilter} onChange={e => setClassFilter(e.target.value)}>
+              <option value="all">All Classes</option>
+              {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+            <select className="h-10 rounded-md border border-zinc-200 bg-white px-3 text-sm font-medium shadow-sm" value={hostlerFilter} onChange={e => setHostlerFilter(e.target.value)}>
+              <option value="all">Any Status</option>
+              <option value="hostler">Hostlers Only</option>
+            </select>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+      {!students.length ? <div className="rounded-md border border-dashed p-8 text-center text-sm text-muted-foreground">No students yet. Choose Add student to create one or upload a roster.</div> : <div className="max-h-[600px] overflow-auto rounded-xl border border-zinc-200 shadow-sm"><table className="w-full text-sm"><thead className="sticky top-0 bg-zinc-100/80 backdrop-blur-sm shadow-sm z-10"><tr><th className="p-4 text-left font-semibold text-zinc-700">Student</th><th className="p-4 text-left font-semibold text-zinc-700">Admission no.</th><th className="p-4 text-left font-semibold text-zinc-700">Class / section</th><th className="p-4"></th><th className="p-4"></th></tr></thead><tbody className="divide-y divide-zinc-100 bg-white">{
+        students.filter(student => {
+          if (classFilter !== 'all' && student.class_id !== classFilter) return false;
+          if (searchQuery) {
+            const query = searchQuery.toLowerCase();
+            const matchesName = student.student_name?.toLowerCase().includes(query);
+            const matchesId = student.admission_number?.toLowerCase().includes(query);
+            if (!matchesName && !matchesId) return false;
+          }
+          if (hostlerFilter === 'hostler') {
+            const detail = details.find(d => d.student_id === student.id);
+            if (detail?.details?.is_hostler !== 'Yes') return false;
+          }
+          return true;
+        }).map((student) => { 
+        const value = assignments[student.id] ?? { classId: student.class_id, sectionId: student.section_id }; 
+        const choices = sectionsByClass[value.classId] ?? []; 
+        const detail = details.find((item) => item.student_id === student.id); 
+        const updatedAt = [student.updated_at, detail?.updated_at].filter(Boolean).reduce((latest: string | undefined, value: string | undefined) => value && (!latest || value > latest) ? value : latest, ''); 
+        const updatedBy = updatedAt === detail?.updated_at ? detail?.updated_by_email : student.updated_by_email; 
+        return <tr key={student.id} className="group hover:bg-indigo-50/40 transition-colors cursor-pointer" onClick={() => setViewing(student)}>
+          <td className="p-4 font-medium">
+            <div className="flex items-center gap-3">
+              {detail?.profile_picture_url ? <img src={detail.profile_picture_url} className="w-11 h-11 rounded-full object-cover shadow-sm ring-1 ring-zinc-200" /> : <div className="w-11 h-11 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold shadow-sm ring-1 ring-indigo-200 text-lg">{student.student_name.charAt(0).toUpperCase()}</div>}
+              <div>
+                <span className="text-[15px] font-semibold text-zinc-900 group-hover:text-indigo-700 transition-colors">{student.student_name}</span>
+                <div className="flex items-center gap-1.5 mt-1">
+                  {detail?.details?.is_hostler === 'Yes' && <span className="text-[10px] font-bold text-rose-700 bg-rose-50 border border-rose-100 px-1.5 py-0.5 rounded-md uppercase tracking-wide">Hostler</span>}
+                  {detail?.details?.transport_available === 'Yes' && <span className="text-[10px] font-bold text-sky-700 bg-sky-50 border border-sky-100 px-1.5 py-0.5 rounded-md uppercase tracking-wide">Transport</span>}
+                  <span className="text-[11px] font-medium text-zinc-500">{updatedAt ? `Updated ${new Date(updatedAt).toLocaleDateString()}` : 'No updates'}</span>
+                </div>
+              </div>
+            </div>
+          </td>
+          <td className="p-4 text-zinc-500 font-medium text-[13px]">{student.admission_number ? <span className="bg-zinc-100 px-2 py-1 rounded-md text-zinc-700 border border-zinc-200">#{student.admission_number}</span> : '—'}</td>
+          <td className="min-w-[260px] p-4" onClick={e => e.stopPropagation()}><div className="flex gap-2"><select aria-label={`Class for ${student.student_name}`} className="h-9 min-w-28 rounded-md border border-zinc-200 bg-white px-2 text-[13px] font-medium text-zinc-700 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none" value={value.classId} onChange={(event) => { const classId = event.target.value; setAssignments((current) => ({ ...current, [student.id]: { classId, sectionId: sectionsByClass[classId]?.[0]?.id ?? '' } })) }}>{classes.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><select aria-label={`Section for ${student.student_name}`} className="h-9 min-w-24 rounded-md border border-zinc-200 bg-white px-2 text-[13px] font-medium text-zinc-700 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none" value={value.sectionId} onChange={(event) => setAssignments((current) => ({ ...current, [student.id]: { ...value, sectionId: event.target.value } }))}>{choices.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></div></td>
+          <td className="p-4" onClick={e => e.stopPropagation()}><Button size="sm" variant="outline" className="h-9 text-[12px] font-semibold text-emerald-700 border-emerald-200 hover:bg-emerald-50" disabled={isPending || !value.sectionId || (value.classId === student.class_id && value.sectionId === student.section_id)} onClick={() => saveAssignment(student)}>Save</Button></td>
+          <td className="p-4" onClick={e => e.stopPropagation()}><Button size="sm" variant="ghost" className="h-9 text-[12px] font-semibold text-indigo-600 hover:bg-indigo-50" onClick={() => { setEditing(student); setEditorOpen(true) }}><Pencil className="mr-1 h-3.5 w-3.5" />Edit</Button></td>
+        </tr> 
+      })}</tbody></table></div>}
     </CardContent></Card>
     {(error || notice) && <p role="status" className={`whitespace-pre-line text-sm ${error ? 'text-destructive' : 'text-green-700'}`}>{error || notice}</p>}
     <StudentEditorSheet key={editing?.id ?? 'new'} orgId={orgId} open={editorOpen} onOpenChange={setEditorOpen} onSaved={(warning) => { if (warning) setError(warning); else setNotice(editing ? 'Student details updated.' : 'Student added.') }} student={editing} detail={details.find((item) => item.student_id === editing?.id)} classes={classes} sections={sections} subjects={subjects} houses={houses} />
+    <Sheet open={!!viewing} onOpenChange={(open) => !open && setViewing(null)}>
+      <SheetContent className="w-full sm:max-w-md md:max-w-lg lg:max-w-2xl overflow-y-auto">
+        {viewing && (() => {
+          const detail = details.find((item) => item.student_id === viewing.id);
+          const cls = classes.find(c => c.id === viewing.class_id);
+          const sec = sections.find(s => s.id === viewing.section_id);
+          return (
+            <>
+              <SheetHeader className="border-b pb-6 mb-6">
+                <div className="flex items-center gap-4">
+                  {detail?.profile_picture_url ? <img src={detail.profile_picture_url} className="w-20 h-20 rounded-xl object-cover shadow-sm ring-1 ring-zinc-200" /> : <div className="w-20 h-20 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold shadow-sm ring-1 ring-indigo-200 text-3xl">{viewing.student_name.charAt(0).toUpperCase()}</div>}
+                  <div>
+                    <SheetTitle className="text-2xl">{viewing.student_name}</SheetTitle>
+                    <SheetDescription className="text-sm mt-1 flex items-center gap-2">
+                      <span className="bg-zinc-100 text-zinc-700 px-2 py-0.5 rounded font-medium">Class: {cls?.name || 'N/A'}</span>
+                      <span className="bg-zinc-100 text-zinc-700 px-2 py-0.5 rounded font-medium">Section: {sec?.name || 'N/A'}</span>
+                      {viewing.admission_number && <span className="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded font-medium border border-indigo-100">#{viewing.admission_number}</span>}
+                    </SheetDescription>
+                  </div>
+                </div>
+              </SheetHeader>
+              
+              <div className="space-y-8">
+                {/* Highlights / Badges */}
+                <div className="flex flex-wrap gap-2">
+                  <div className="flex items-center gap-2 bg-emerald-50 text-emerald-700 px-3 py-2 rounded-lg border border-emerald-100 text-sm font-medium"><User className="w-4 h-4" /> Status: {viewing.status}</div>
+                  {detail?.details?.is_hostler === 'Yes' && <div className="flex items-center gap-2 bg-rose-50 text-rose-700 px-3 py-2 rounded-lg border border-rose-100 text-sm font-medium"><Home className="w-4 h-4" /> Hostler</div>}
+                  {detail?.details?.transport_available === 'Yes' && <div className="flex items-center gap-2 bg-sky-50 text-sky-700 px-3 py-2 rounded-lg border border-sky-100 text-sm font-medium"><Wallet className="w-4 h-4" /> Transport: Yes</div>}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Personal Info */}
+                  <div className="space-y-4 bg-zinc-50 rounded-xl p-5 border border-zinc-100">
+                    <h3 className="font-semibold flex items-center gap-2 text-zinc-900 border-b border-zinc-200 pb-2"><User className="w-4 h-4 text-indigo-500" /> Personal Info</h3>
+                    <div className="grid grid-cols-2 gap-y-4 gap-x-2 text-sm">
+                      <div><p className="text-zinc-500 text-xs mb-1">Gender</p><p className="font-medium text-zinc-900">{viewing.gender || '—'}</p></div>
+                      <div><p className="text-zinc-500 text-xs mb-1">Date of Birth</p><p className="font-medium text-zinc-900">{viewing.date_of_birth || '—'}</p></div>
+                      <div><p className="text-zinc-500 text-xs mb-1">Blood Group</p><p className="font-medium text-zinc-900">{detail?.details?.blood_group || '—'}</p></div>
+                      <div><p className="text-zinc-500 text-xs mb-1">Religion</p><p className="font-medium text-zinc-900">{detail?.details?.religion || '—'}</p></div>
+                    </div>
+                  </div>
+
+                  {/* Guardian Info */}
+                  <div className="space-y-4 bg-zinc-50 rounded-xl p-5 border border-zinc-100">
+                    <h3 className="font-semibold flex items-center gap-2 text-zinc-900 border-b border-zinc-200 pb-2"><Home className="w-4 h-4 text-indigo-500" /> Guardian & Contact</h3>
+                    <div className="grid grid-cols-1 gap-y-4 text-sm">
+                      <div><p className="text-zinc-500 text-xs mb-1">Guardian Name</p><p className="font-medium text-zinc-900">{viewing.guardian_name || '—'}</p></div>
+                      <div><p className="text-zinc-500 text-xs mb-1">Phone Number</p><p className="font-medium text-zinc-900">{viewing.guardian_phone || '—'}</p></div>
+                      <div><p className="text-zinc-500 text-xs mb-1">Email</p><p className="font-medium text-zinc-900">{viewing.guardian_email || '—'}</p></div>
+                      <div><p className="text-zinc-500 text-xs mb-1">Address</p><p className="font-medium text-zinc-900">{detail?.details?.address_line_1 ? `${detail.details.address_line_1}, ${detail.details.city || ''}` : '—'}</p></div>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Quick Actions / Placeholders for future data */}
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-zinc-900">Student Data & Management</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div className="bg-white border border-zinc-200 p-4 rounded-xl text-center hover:border-indigo-300 hover:shadow-sm cursor-pointer transition-all">
+                      <Wallet className="w-6 h-6 text-indigo-500 mx-auto mb-2" />
+                      <p className="text-sm font-medium">Fees & Dues</p>
+                    </div>
+                    <div className="bg-white border border-zinc-200 p-4 rounded-xl text-center hover:border-indigo-300 hover:shadow-sm cursor-pointer transition-all">
+                      <Calendar className="w-6 h-6 text-indigo-500 mx-auto mb-2" />
+                      <p className="text-sm font-medium">Attendance</p>
+                    </div>
+                    <div className="bg-white border border-zinc-200 p-4 rounded-xl text-center hover:border-indigo-300 hover:shadow-sm cursor-pointer transition-all">
+                      <FileText className="w-6 h-6 text-indigo-500 mx-auto mb-2" />
+                      <p className="text-sm font-medium">Documents</p>
+                    </div>
+                    <div className="bg-white border border-indigo-200 bg-indigo-50 p-4 rounded-xl text-center hover:bg-indigo-100 cursor-pointer transition-all" onClick={() => { setViewing(null); setEditing(viewing); setEditorOpen(true) }}>
+                      <Pencil className="w-6 h-6 text-indigo-600 mx-auto mb-2" />
+                      <p className="text-sm font-semibold text-indigo-700">Full Edit</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </>
+          );
+        })()}
+      </SheetContent>
+    </Sheet>
   </div>
 }

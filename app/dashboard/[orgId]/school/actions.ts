@@ -28,17 +28,60 @@ async function getSchoolAccess(orgId: string, permission: 'manage_school' | 'stu
 
 export async function getSchoolData(orgId: string) {
   const supabase = await getSchoolAccess(orgId, 'manage_school')
-  const [{ data: classes, error: classError }, { data: sections, error: sectionError }, { data: subjects, error: subjectError }, { data: classTeachers, error: classTeacherError }, { data: subjectTeachers, error: subjectTeacherError }] = await Promise.all([
+  const [
+    { data: classes, error: classError }, 
+    { data: sections, error: sectionError }, 
+    { data: subjects, error: subjectError }, 
+    { data: sectionTeachers, error: sectionTeacherError }, 
+    { data: subjectTeachers, error: subjectTeacherError },
+    { data: houses, error: houseError },
+    { data: students, error: studentError }
+  ] = await Promise.all([
     supabase.from('school_classes').select('id, name, sort_order').eq('org_id', orgId).order('sort_order').order('name'),
     supabase.from('school_sections').select('id, class_id, name').eq('org_id', orgId).order('name'),
-    supabase.from('school_subjects').select('id, class_id, section_id, name').eq('org_id', orgId).order('name'),
-    supabase.from('school_class_teachers').select('class_id, teacher_id').eq('org_id', orgId),
+    supabase.from('school_subjects').select('id, class_id, section_id, name, knowledge_type, is_compulsory').eq('org_id', orgId).order('name'),
+    supabase.from('school_section_teachers').select('section_id, teacher_id').eq('org_id', orgId),
     supabase.from('school_subject_teachers').select('subject_id, teacher_id').eq('org_id', orgId),
+    supabase.from('school_houses').select('id, name, color').eq('org_id', orgId).order('name'),
+    supabase.from('students').select('id, student_name, section_id, admission_number, gender, date_of_birth, guardian_name, phone, status, student_details(profile_picture_path)').eq('org_id', orgId).order('student_name'),
   ])
-  if (classError || sectionError || subjectError || classTeacherError || subjectTeacherError) throw new Error(classError?.message ?? sectionError?.message ?? subjectError?.message ?? classTeacherError?.message ?? subjectTeacherError?.message)
+  if (classError || sectionError || subjectError || sectionTeacherError || subjectTeacherError || studentError) throw new Error(classError?.message ?? sectionError?.message ?? subjectError?.message ?? sectionTeacherError?.message ?? subjectTeacherError?.message ?? studentError?.message)
   const { data: teachers, error: teacherError } = await createAdminClient().from('school_teachers').select('id, name, email, phone, status').eq('org_id', orgId).order('name')
   if (teacherError) throw new Error(teacherError.message)
-  return { classes: classes ?? [], sections: sections ?? [], subjects: subjects ?? [], teachers: teachers ?? [], classTeachers: classTeachers ?? [], subjectTeachers: subjectTeachers ?? [] }
+  
+  let studentsWithUrls = students ?? []
+  if (studentsWithUrls.length > 0) {
+    const admin = createAdminClient()
+    const paths = studentsWithUrls.map(s => {
+      const details = Array.isArray(s.student_details) ? s.student_details[0] : s.student_details
+      return details?.profile_picture_path
+    }).filter(Boolean) as string[]
+    
+    if (paths.length > 0) {
+      const { data: signedUrls } = await admin.storage.from('student-profile-images').createSignedUrls(paths, 3600)
+      const urlMap = new Map(signedUrls?.map(u => [u.path, u.signedUrl]))
+      
+      studentsWithUrls = studentsWithUrls.map(s => {
+        const details = Array.isArray(s.student_details) ? s.student_details[0] : s.student_details
+        const path = details?.profile_picture_path
+        return {
+          ...s,
+          avatar_url: path ? urlMap.get(path) || null : null
+        }
+      })
+    }
+  }
+
+  return { 
+    classes: classes ?? [], 
+    sections: sections ?? [], 
+    subjects: subjects ?? [], 
+    teachers: teachers ?? [], 
+    sectionTeachers: sectionTeachers ?? [], 
+    subjectTeachers: subjectTeachers ?? [],
+    houses: houses ?? [],
+    students: studentsWithUrls
+  }
 }
 
 async function requireSchoolManager(orgId: string) {
@@ -75,8 +118,11 @@ export async function createSchoolTeacher(orgId: string, formData: FormData) {
     data: { full_name: name, role: 'TEACHER', org_id: orgId, teacher_id: teacherId, invited_by_role: invitedByRole },
     redirectTo,
   })
+  
+  let finalUserId: string | null = null;
   if (!inviteError && invite.user) {
     await admin.from('school_teachers').update({ user_id: invite.user.id }).eq('org_id', orgId).eq('id', teacherId)
+    finalUserId = invite.user.id
   } else if (inviteError && /already\s+(been\s+)?registered/i.test(inviteError.message)) {
     const { data: authUsers, error: listError } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 })
     if (listError) {
@@ -94,11 +140,32 @@ export async function createSchoolTeacher(orgId: string, formData: FormData) {
     }
     const { error: attachError } = await admin.from('school_teachers').update({ user_id: matched.id, status: matched.email_confirmed_at ? 'ACTIVE' : 'PENDING' }).eq('org_id', orgId).eq('id', teacherId)
     if (attachError) throw new Error(attachError.message)
-    // Existing accounts keep their sign-in method; the franchise admin can send a password setup link if needed.
+    finalUserId = matched.id
   } else {
     await admin.from('school_teachers').delete().eq('org_id', orgId).eq('id', teacherId)
     throw new Error(inviteError?.message ?? 'Could not send the teacher invitation.')
   }
+
+  const avatar = formData.get('avatar')
+  if (avatar instanceof File && avatar.size && finalUserId) {
+    const suffix = avatar.type === 'image/png' ? 'png' : avatar.type === 'image/webp' ? 'webp' : 'jpg'
+    const filePath = `${orgId}/${teacherId}/${crypto.randomUUID()}.${suffix}`
+    
+    // First ensure the bucket exists
+    await admin.storage.createBucket('teacher_avatars', { public: true }).catch(() => {})
+    
+    const { error: uploadError } = await admin.storage.from('teacher_avatars').upload(filePath, avatar, { contentType: avatar.type })
+    if (!uploadError) {
+      const { data } = admin.storage.from('teacher_avatars').getPublicUrl(filePath)
+      if (data?.publicUrl) {
+        // Attempt to update the teacher record with the new URL. 
+        // Note: The public.school_teachers table needs an avatar_url column for this to succeed!
+        const { error: avatarUpdateError } = await admin.from('school_teachers').update({ avatar_url: data.publicUrl }).eq('id', teacherId)
+        if (avatarUpdateError) console.error(avatarUpdateError)
+      }
+    }
+  }
+
   revalidatePath(`/dashboard/${orgId}/school`)
   revalidatePath(`/dashboard/${orgId}/staff`)
 }
@@ -129,11 +196,11 @@ export async function addSchoolSection(orgId: string, classId: string, name: str
   revalidatePath(`/dashboard/${orgId}/school`)
 }
 
-export async function addSchoolSubject(orgId: string, classId: string, sectionId: string, name: string) {
+export async function addSchoolSubject(orgId: string, classId: string, sectionId: string, name: string, knowledgeType: string, isCompulsory: boolean) {
   const supabase = await getSchoolAccess(orgId, 'manage_school')
   const normalized = name.trim()
   if (!normalized || normalized.length > 60) throw new Error('Enter a subject name up to 60 characters.')
-  const { error } = await supabase.from('school_subjects').insert({ org_id: orgId, class_id: classId, section_id: sectionId, name: normalized })
+  const { error } = await supabase.from('school_subjects').insert({ org_id: orgId, class_id: classId, section_id: sectionId, name: normalized, knowledge_type: knowledgeType, is_compulsory: isCompulsory })
   if (error) throw new Error(error.code === '23505' ? 'This subject is already listed for the section.' : error.message)
   revalidatePath(`/dashboard/${orgId}/school`)
 }
@@ -145,11 +212,11 @@ async function requireSchoolTeacher(orgId: string, teacherId: string) {
   }
 }
 
-export async function assignTeacherToClass(orgId: string, classId: string, teacherId: string) {
+export async function assignTeacherToSection(orgId: string, sectionId: string, teacherId: string) {
   const supabase = await getSchoolAccess(orgId, 'manage_school')
   await requireSchoolTeacher(orgId, teacherId)
-  const { error } = await supabase.from('school_class_teachers').insert({ org_id: orgId, class_id: classId, teacher_id: teacherId })
-  if (error) throw new Error(error.code === '23505' ? 'This teacher is already assigned to the class.' : error.message)
+  const { error } = await supabase.from('school_section_teachers').insert({ org_id: orgId, section_id: sectionId, teacher_id: teacherId })
+  if (error) throw new Error(error.code === '23505' ? 'This teacher is already assigned to the section.' : error.message)
   revalidatePath(`/dashboard/${orgId}/school`)
   revalidatePath(`/dashboard/${orgId}/staff`)
 }
@@ -165,15 +232,52 @@ export async function assignTeacherToSubject(orgId: string, subjectId: string, t
 
 export async function getTeacherAssignments(orgId: string) {
   const supabase = await getSchoolAccess(orgId, 'manage_school')
-  const [{ data: classes, error: classError }, { data: sections, error: sectionError }, { data: subjects, error: subjectError }, { data: classTeachers, error: classTeacherError }, { data: subjectTeachers, error: subjectTeacherError }] = await Promise.all([
+  const [{ data: classes, error: classError }, { data: sections, error: sectionError }, { data: subjects, error: subjectError }, { data: sectionTeachers, error: sectionTeacherError }, { data: subjectTeachers, error: subjectTeacherError }] = await Promise.all([
     supabase.from('school_classes').select('id, name').eq('org_id', orgId).order('sort_order').order('name'),
     supabase.from('school_sections').select('id, class_id, name').eq('org_id', orgId),
     supabase.from('school_subjects').select('id, class_id, section_id, name').eq('org_id', orgId).order('name'),
-    supabase.from('school_class_teachers').select('class_id, teacher_id').eq('org_id', orgId),
+    supabase.from('school_section_teachers').select('section_id, teacher_id').eq('org_id', orgId),
     supabase.from('school_subject_teachers').select('subject_id, teacher_id').eq('org_id', orgId),
   ])
-  if (classError || sectionError || subjectError || classTeacherError || subjectTeacherError) throw new Error(classError?.message ?? sectionError?.message ?? subjectError?.message ?? classTeacherError?.message ?? subjectTeacherError?.message)
+  if (classError || sectionError || subjectError || sectionTeacherError || subjectTeacherError) throw new Error(classError?.message ?? sectionError?.message ?? subjectError?.message ?? sectionTeacherError?.message ?? subjectTeacherError?.message)
   const { data: teachers, error: teacherError } = await createAdminClient().from('school_teachers').select('id, name, email, phone, status').eq('org_id', orgId).order('name')
   if (teacherError) throw new Error(teacherError.message)
-  return { classes: classes ?? [], sections: sections ?? [], subjects: subjects ?? [], classTeachers: classTeachers ?? [], subjectTeachers: subjectTeachers ?? [], teachers: teachers ?? [] }
+  return { classes: classes ?? [], sections: sections ?? [], subjects: subjects ?? [], sectionTeachers: sectionTeachers ?? [], subjectTeachers: subjectTeachers ?? [], teachers: teachers ?? [] }
+}
+
+export async function addSchoolHouse(orgId: string, formData: FormData) {
+  const { admin } = await requireSchoolManager(orgId)
+  const name = String(formData.get('name') ?? '').trim()
+  const color = String(formData.get('color') ?? '').trim()
+  if (!name || !color) throw new Error('House name and color are required.')
+  
+  const { error } = await admin.from('school_houses').insert({
+    org_id: orgId,
+    name,
+    color,
+  })
+  
+  if (error) throw new Error(error.message)
+  revalidatePath(`/dashboard/${orgId}/school`)
+}
+
+export async function deleteSchoolClass(orgId: string, classId: string) {
+  const supabase = await getSchoolAccess(orgId, 'manage_school')
+  const { error } = await supabase.from('school_classes').delete().eq('org_id', orgId).eq('id', classId)
+  if (error) throw new Error(error.message)
+  revalidatePath(`/dashboard/${orgId}/school`)
+}
+
+export async function deleteSchoolSection(orgId: string, sectionId: string) {
+  const supabase = await getSchoolAccess(orgId, 'manage_school')
+  const { error } = await supabase.from('school_sections').delete().eq('org_id', orgId).eq('id', sectionId)
+  if (error) throw new Error(error.message)
+  revalidatePath(`/dashboard/${orgId}/school`)
+}
+
+export async function deleteSchoolSubject(orgId: string, subjectId: string) {
+  const supabase = await getSchoolAccess(orgId, 'manage_school')
+  const { error } = await supabase.from('school_subjects').delete().eq('org_id', orgId).eq('id', subjectId)
+  if (error) throw new Error(error.message)
+  revalidatePath(`/dashboard/${orgId}/school`)
 }
