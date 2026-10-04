@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { 
+import {
   Facebook, Instagram, Youtube, Twitter, Github
 } from "lucide-react";
 import Image from "next/image";
@@ -20,11 +20,11 @@ export default function Footer() {
           .select('health')
           .limit(1)
           .single();
-        
+
         if (!error && data?.health === true) {
           setIsHealthy(true);
         }
-        setIsHealthy(true); 
+        setIsHealthy(true);
       } catch (err) {
         console.error("Health check failed", err);
       }
@@ -36,7 +36,7 @@ export default function Footer() {
     <footer className="bg-white border-t border-gray-200 font-sans">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="xl:grid xl:grid-cols-5 xl:gap-8">
-          
+
           {/* Brand & Status */}
           <div className="xl:col-span-2 space-y-8">
             <Link href="/" className="inline-block">
@@ -63,7 +63,7 @@ export default function Footer() {
                 <Github className="h-5 w-5" />
               </a>
             </div>
-            
+
             {/* Minimal Status Indicator */}
             {isHealthy && (
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-gray-200 bg-gray-50">
@@ -119,10 +119,10 @@ export default function Footer() {
             </div>
           </div>
         </div>
-        
+
         <div className="mt-16 pt-8 border-t border-gray-200 flex flex-col md:flex-row items-center justify-between">
           <p className="text-sm text-gray-400">
-            &copy; {new Date().getFullYear()} Dheeraj Playschool Admin ERP. All rights reserved.
+            &copy; {new Date().getFullYear()} Best Pre School Admin ERP. All rights reserved.
           </p>
           <p className="mt-4 md:mt-0 text-sm text-gray-400 flex items-center gap-1">
             Built by <a href="https://scalesaas.ashishrohilla.co.in/" target="_blank" rel="noreferrer" className="font-medium text-gray-600 hover:text-gray-900 transition-colors">ScaleSaaS</a>

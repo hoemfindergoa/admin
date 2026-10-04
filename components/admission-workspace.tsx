@@ -18,9 +18,9 @@ export function AdmissionWorkspace({ orgId, classes, forms = [] }: { orgId: stri
   const [deadline, setDeadline] = useState('')
   const [selectedClasses, setSelectedClasses] = useState<string[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
-  
+
   const toggleClass = (classId: string) => {
-    setSelectedClasses(prev => 
+    setSelectedClasses(prev =>
       prev.includes(classId) ? prev.filter(c => c !== classId) : [...prev, classId]
     )
   }
@@ -33,9 +33,9 @@ export function AdmissionWorkspace({ orgId, classes, forms = [] }: { orgId: stri
       formData.set('name', name)
       formData.set('deadline', deadline)
       formData.set('classes', JSON.stringify(selectedClasses))
-      
+
       await createAdmissionForm(orgId, formData)
-      
+
       setName('')
       setDeadline('')
       setSelectedClasses([])
@@ -87,22 +87,22 @@ export function AdmissionWorkspace({ orgId, classes, forms = [] }: { orgId: stri
           {forms.map(form => (
             <div key={form.id} className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm flex flex-col transition-all hover:border-indigo-300 hover:shadow-md">
               <div className="flex items-center gap-3 mb-4">
-                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 ring-1 ring-indigo-200/50">
-                    <FileText className="h-5 w-5" />
-                 </div>
-                 <div>
-                    <h3 className="font-bold text-zinc-900 leading-tight">{form.name}</h3>
-                 </div>
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 ring-1 ring-indigo-200/50">
+                  <FileText className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-zinc-900 leading-tight">{form.name}</h3>
+                </div>
               </div>
               <div className="space-y-3 mb-6 flex-1">
-                 <div className="flex items-center gap-2 text-[13px] font-medium text-zinc-500">
-                    <CalendarIcon className="h-4 w-4 text-zinc-400" />
-                    Deadline: {new Date(form.deadline).toLocaleDateString()}
-                 </div>
-                 <div className="flex items-start gap-2 text-[13px] font-medium text-zinc-500">
-                    <Users className="h-4 w-4 text-zinc-400 mt-0.5" />
-                    <span>{form.classes.length} Classes allowed</span>
-                 </div>
+                <div className="flex items-center gap-2 text-[13px] font-medium text-zinc-500">
+                  <CalendarIcon className="h-4 w-4 text-zinc-400" />
+                  Deadline: {new Date(form.deadline).toLocaleDateString()}
+                </div>
+                <div className="flex items-start gap-2 text-[13px] font-medium text-zinc-500">
+                  <Users className="h-4 w-4 text-zinc-400 mt-0.5" />
+                  <span>{form.classes.length} Classes allowed</span>
+                </div>
               </div>
               <div className="pt-4 border-t border-zinc-100">
                 <Button variant="outline" className="w-full justify-center h-9 text-[13px] font-semibold border-zinc-200 text-zinc-700 hover:bg-zinc-50">
@@ -126,21 +126,21 @@ export function AdmissionWorkspace({ orgId, classes, forms = [] }: { orgId: stri
             <div className="space-y-6">
               <div className="space-y-2">
                 <Label className="text-[13px] font-bold text-zinc-900">Name <span className="text-red-500">*</span></Label>
-                <Input 
-                  required 
-                  placeholder="i.e. Highschool Admission form" 
-                  value={name} 
+                <Input
+                  required
+                  placeholder="i.e. Highschool Admission form"
+                  value={name}
                   onChange={e => setName(e.target.value)}
                   className="h-10 font-medium"
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label className="text-[13px] font-bold text-zinc-900">Deadline <span className="text-red-500">*</span></Label>
-                <Input 
-                  required 
+                <Input
+                  required
                   type="date"
-                  value={deadline} 
+                  value={deadline}
                   onChange={e => setDeadline(e.target.value)}
                   className="h-10 font-medium"
                 />
@@ -151,15 +151,14 @@ export function AdmissionWorkspace({ orgId, classes, forms = [] }: { orgId: stri
                 <p className="text-xs text-zinc-500 font-medium -mt-2 mb-3">Select the classes open for admission.</p>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                   {classes.map(c => (
-                    <button 
+                    <button
                       key={c.id}
                       type="button"
                       onClick={() => toggleClass(c.id)}
-                      className={`flex items-center justify-center p-3 rounded-xl border text-[13px] font-semibold cursor-pointer transition-all ${
-                        selectedClasses.includes(c.id) 
-                          ? 'bg-indigo-50 border-indigo-200 text-indigo-700 ring-1 ring-indigo-200' 
-                          : 'bg-white border-zinc-200 text-zinc-600 hover:bg-zinc-50'
-                      }`}
+                      className={`flex items-center justify-center p-3 rounded-xl border text-[13px] font-semibold cursor-pointer transition-all ${selectedClasses.includes(c.id)
+                        ? 'bg-indigo-50 border-indigo-200 text-indigo-700 ring-1 ring-indigo-200'
+                        : 'bg-white border-zinc-200 text-zinc-600 hover:bg-zinc-50'
+                        }`}
                     >
                       {c.name}
                     </button>
@@ -168,23 +167,23 @@ export function AdmissionWorkspace({ orgId, classes, forms = [] }: { orgId: stri
               </div>
 
               <div className="space-y-4 pt-4">
-                 <Label className="text-[13px] font-bold text-zinc-900 block border-b border-zinc-100 pb-2">Fields Included in this Form (Read-only)</Label>
-                 <div className="space-y-1">
-                    <p className="text-[13px] font-semibold text-zinc-700">1. Personal Details</p>
-                    <p className="text-[12px] text-zinc-500 pl-4">Name, Father's Name, Mother's Name, DOB, Gender, Mobile, Religion, Category, Aadhar, etc.</p>
-                 </div>
-                 <div className="space-y-1">
-                    <p className="text-[13px] font-semibold text-zinc-700">2. Educational Information</p>
-                    <p className="text-[12px] text-zinc-500 pl-4">Class of Admission, Last Institute, Previous Class %, Special Educational Needs.</p>
-                 </div>
-                 <div className="space-y-1">
-                    <p className="text-[13px] font-semibold text-zinc-700">3. Parents</p>
-                    <p className="text-[12px] text-zinc-500 pl-4">Occupation, Qualification, Family Income, Emails.</p>
-                 </div>
-                 <div className="space-y-1">
-                    <p className="text-[13px] font-semibold text-zinc-700">4. Address & Guardian</p>
-                    <p className="text-[12px] text-zinc-500 pl-4">House/Ward, Village, Post Office, District, State, Pincode. Guardian Details & Emergency Contact.</p>
-                 </div>
+                <Label className="text-[13px] font-bold text-zinc-900 block border-b border-zinc-100 pb-2">Fields Included in this Form (Read-only)</Label>
+                <div className="space-y-1">
+                  <p className="text-[13px] font-semibold text-zinc-700">1. Personal Details</p>
+                  <p className="text-[12px] text-zinc-500 pl-4">Name, Father's Name, Mother's Name, DOB, Gender, Mobile, Religion, Category, Aadhar, etc.</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-[13px] font-semibold text-zinc-700">2. Educational Information</p>
+                  <p className="text-[12px] text-zinc-500 pl-4">Class of Admission, Last Institute, Previous Class %, Special Educational Needs.</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-[13px] font-semibold text-zinc-700">3. Parents</p>
+                  <p className="text-[12px] text-zinc-500 pl-4">Occupation, Qualification, Family Income, Emails.</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-[13px] font-semibold text-zinc-700">4. Address & Guardian</p>
+                  <p className="text-[12px] text-zinc-500 pl-4">House/Ward, Village, Post Office, District, State, Pincode. Guardian Details & Emergency Contact.</p>
+                </div>
               </div>
             </div>
 
