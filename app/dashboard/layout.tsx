@@ -3,6 +3,7 @@ import { createClient } from '@/utils/supabase/server'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { getCrmAccess } from '@/utils/crm-access'
+import { DashboardUserNav } from '@/components/dashboard-user-nav'
 
 export default async function DashboardRootLayout({
   children,
@@ -11,9 +12,13 @@ export default async function DashboardRootLayout({
 }) {
   const supabase = createClient(await cookies())
   const { data: { user } } = await supabase.auth.getUser()
+  let isOwner = false;
   if (user) {
     const access = await getCrmAccess(user.id)
     if (access.isCrmMember) redirect('/crm')
+      
+    const { count } = await supabase.from('organizations').select('*', { count: 'exact', head: true }).eq('owner_id', user.id);
+    isOwner = count ? count > 0 : false;
   }
   return (
     <div className="flex min-h-screen w-full bg-zinc-50/50">
@@ -26,7 +31,11 @@ export default async function DashboardRootLayout({
             <div className="font-semibold text-[15px] tracking-tight text-zinc-900">Admin Portal</div>
           </div>
           <div className="flex items-center gap-4">
-             {/* User Profile Dropdown could go here */}
+             <DashboardUserNav 
+               email={user?.email} 
+               avatarUrl={user?.user_metadata?.avatar_url} 
+               showCrmButton={isOwner}
+             />
           </div>
         </header>
         <main className="flex-1 items-start p-4 sm:px-8 sm:py-8 w-full max-w-[1800px] mx-auto">

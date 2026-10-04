@@ -16,7 +16,7 @@ import {
   SheetFooter,
   SheetClose,
 } from '@/components/ui/sheet'
-import { updateOrganization } from '@/app/dashboard/actions'
+import { updateOrganization, deleteOrganization } from '@/app/dashboard/actions'
 
 interface Org {
   id: string
@@ -54,6 +54,21 @@ export function EditFranchiseSheet({ org, trigger }: EditFranchiseSheetProps) {
         router.refresh()
       } catch (err: any) {
         setError(err?.message ?? 'Something went wrong. Please try again.')
+      }
+    })
+  }
+
+  function handleDelete() {
+    if (!confirm(`Are you sure you want to delete ${org.name}? This action cannot be undone and will delete all associated data.`)) return
+
+    setError(null)
+    startTransition(async () => {
+      try {
+        await deleteOrganization(org.id)
+        setOpen(false)
+        router.refresh()
+      } catch (err: any) {
+        setError(err?.message ?? 'Failed to delete franchise. It may have dependent data (like students or staff) that needs to be deleted first.')
       }
     })
   }
@@ -210,16 +225,27 @@ export function EditFranchiseSheet({ org, trigger }: EditFranchiseSheetProps) {
             </p>
           )}
 
-          <SheetFooter className="pt-4 gap-3 flex-row justify-end border-t">
-            <SheetClose asChild>
-              <Button type="button" variant="outline" disabled={isPending}>
-                Cancel
-              </Button>
-            </SheetClose>
-            <Button type="submit" disabled={isPending} className="gap-2">
-              {isPending && <Loader2 className="w-4 h-4 animate-spin" />}
-              {isPending ? 'Saving…' : 'Save Changes'}
+          <SheetFooter className="pt-4 gap-3 flex-row justify-between border-t items-center w-full sm:justify-between">
+            <Button 
+              type="button" 
+              variant="destructive" 
+              disabled={isPending}
+              onClick={handleDelete}
+              className="mr-auto"
+            >
+              Delete
             </Button>
+            <div className="flex gap-2">
+              <SheetClose asChild>
+                <Button type="button" variant="outline" disabled={isPending}>
+                  Cancel
+                </Button>
+              </SheetClose>
+              <Button type="submit" disabled={isPending} className="gap-2">
+                {isPending && <Loader2 className="w-4 h-4 animate-spin" />}
+                {isPending ? 'Saving…' : 'Save'}
+              </Button>
+            </div>
           </SheetFooter>
         </form>
       </SheetContent>

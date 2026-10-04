@@ -178,3 +178,24 @@ export async function updateOrganization(orgId: string, formData: FormData) {
   revalidatePath('/dashboard')
   return data[0]
 }
+
+export async function deleteOrganization(orgId: string) {
+  const cookieStore = await cookies()
+  const supabase = createClient(cookieStore)
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+
+  const { error } = await supabase
+    .from('organizations')
+    .delete()
+    .eq('id', orgId)
+    .eq('owner_id', user.id) // Ensure only owner can delete
+
+  if (error) {
+    console.error('Error deleting organization:', error)
+    throw new Error(error.message)
+  }
+
+  revalidatePath('/dashboard')
+}
