@@ -26,7 +26,7 @@ function MetricCard({ title, value, note, icon: Icon, colorClass, href }: any) {
           <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl shadow-sm ring-1", theme?.bg, theme?.text, theme?.ring, href && "group-hover:scale-105 transition-transform")}>
             <Icon className="h-5 w-5" />
           </div>
-          <span className="text-[12px] font-bold uppercase tracking-wider text-zinc-500">{title}</span>
+          <span className="text-[12px]  uppercase tracking-wider text-zinc-500">{title}</span>
         </div>
         {href && <ChevronRight className="w-4 h-4 text-zinc-300 group-hover:text-zinc-500 transition-colors" />}
       </div>
@@ -110,7 +110,7 @@ export function DashboardInteractive({
                     <CardTitle className="flex items-center gap-2"><CalendarCheck className="w-5 h-5 text-indigo-600" /> Today's Attendance</CardTitle>
                     <CardDescription>Class-wise attendance breakdown.</CardDescription>
                   </div>
-                  <Button variant="outline" size="sm" asChild className="h-8 font-bold border-indigo-200 text-indigo-700 bg-indigo-50 hover:bg-indigo-100">
+                  <Button variant="outline" size="sm" asChild className="h-8  border-indigo-200 text-indigo-700 bg-indigo-50 hover:bg-indigo-100">
                     <Link href={`/dashboard/${orgId}/attendance`}>View Register</Link>
                   </Button>
                 </div>
@@ -118,6 +118,7 @@ export function DashboardInteractive({
               <CardContent className="p-6">
                 {chartData.length > 0 ? (
                   <div className="h-[300px] w-full">
+                    {/* @ts-ignore - known type mismatch between recharts and project React versions */}
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e4e4e7" />
@@ -156,7 +157,7 @@ export function DashboardInteractive({
                       <Icon className="h-5 w-5" />
                     </div>
                     <div>
-                      <p className={cn("font-bold text-[14px] text-zinc-900 transition-colors", `group-hover:${text}`)}>{title}</p>
+                      <p className={cn(" text-[14px] text-zinc-900 transition-colors", `group-hover:${text}`)}>{title}</p>
                       <p className="text-[12px] font-medium text-zinc-500 line-clamp-1">{detail}</p>
                     </div>
                   </div>
@@ -177,7 +178,7 @@ export function DashboardInteractive({
                   <div>
                     <CardTitle className="text-base flex items-center gap-2"><Flag className="w-4 h-4 text-purple-600" /> Upcoming Events</CardTitle>
                   </div>
-                  <Button variant="ghost" size="sm" asChild className="h-7 text-xs font-bold text-zinc-500 hover:text-purple-700">
+                  <Button variant="ghost" size="sm" asChild className="h-7 text-xs  text-zinc-500 hover:text-purple-700">
                     <Link href={`/dashboard/${orgId}/schedules`}>View All</Link>
                   </Button>
                 </div>
@@ -191,11 +192,11 @@ export function DashboardInteractive({
                         <div key={ev.id} className="p-4 hover:bg-zinc-50 transition-colors cursor-pointer" onClick={() => window.location.href = `/dashboard/${orgId}/schedules`}>
                           <div className="flex gap-3">
                             <div className="flex flex-col items-center justify-center w-12 h-12 rounded-lg bg-zinc-100 text-zinc-800 flex-shrink-0">
-                              <span className="text-[9px] font-bold uppercase">{d.toLocaleString('default', { month: 'short' })}</span>
+                              <span className="text-[9px]  uppercase">{d.toLocaleString('default', { month: 'short' })}</span>
                               <span className="text-base font-black leading-none">{d.getDate()}</span>
                             </div>
                             <div>
-                              <h4 className="text-sm font-bold text-zinc-900">{ev.title}</h4>
+                              <h4 className="text-sm  text-zinc-900">{ev.title}</h4>
                               <p className="text-xs text-zinc-500 font-medium mt-0.5 flex items-center gap-1">
                                 <span className={cn("inline-block w-2 h-2 rounded-full", ev.event_type === 'HOLIDAY' ? 'bg-red-500' : 'bg-cyan-500')} />
                                 {ev.event_type} {ev.is_full_day ? '• Full Day' : ''}
@@ -227,7 +228,7 @@ export function DashboardInteractive({
                   {canSeeFinance && (
                     <div className="flex justify-between items-center p-3 bg-emerald-50 rounded-xl border border-emerald-100 cursor-pointer hover:bg-emerald-100 transition-colors" onClick={() => window.location.href = `/dashboard/${orgId}/fees`}>
                       <div>
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 mb-0.5">MTD Income</p>
+                        <p className="text-[10px]  uppercase tracking-wider text-emerald-600 mb-0.5">MTD Income</p>
                         <p className="text-lg font-black text-emerald-700">{money(finance.collectedMonth)}</p>
                       </div>
                       <ChevronRight className="w-4 h-4 text-emerald-400" />
@@ -236,7 +237,7 @@ export function DashboardInteractive({
                   {canSeeExpenses && (
                     <div className="flex justify-between items-center p-3 bg-rose-50 rounded-xl border border-rose-100 cursor-pointer hover:bg-rose-100 transition-colors" onClick={() => window.location.href = `/dashboard/${orgId}/expenses`}>
                       <div>
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-rose-600 mb-0.5">MTD Expenses</p>
+                        <p className="text-[10px]  uppercase tracking-wider text-rose-600 mb-0.5">MTD Expenses</p>
                         <p className="text-lg font-black text-rose-700">{money(finance.expenseMonth)}</p>
                       </div>
                       <ChevronRight className="w-4 h-4 text-rose-400" />

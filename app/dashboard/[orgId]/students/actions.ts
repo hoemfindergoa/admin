@@ -65,9 +65,9 @@ export async function saveStudent(orgId: string, formData: FormData) {
   const sectionId = String(formData.get('section_id') ?? '')
   const studentName = String(formData.get('student_name') ?? '').trim()
   const phone = String(formData.get('phone') ?? '').trim()
-  const category = String(formData.get('category') ?? '').trim()
-  const studentType = String(formData.get('student_type') ?? '').trim()
-  if (!classId || !sectionId || !studentName || !phone || !category || !studentType) throw new Error('Fill in class, section, name, phone, student type, and category.')
+  const category = String(formData.get('category') ?? '').trim() || 'General'
+  const studentType = String(formData.get('student_type') ?? '').trim() || 'Regular'
+  if (!classId || !sectionId || !studentName || !phone) throw new Error('Fill in class, section, name, and phone.')
   const { data: section, error: sectionError } = await supabase.from('school_sections').select('id').eq('org_id', orgId).eq('class_id', classId).eq('id', sectionId).maybeSingle()
   if (sectionError || !section) throw new Error(sectionError?.message ?? 'Choose a section within the selected class.')
 
@@ -215,15 +215,13 @@ export async function importStudents(orgId: string, rows: StudentImportRow[]) {
     const line = index + 2
     const studentName = String(row.student_name ?? '').trim()
     const studentPhone = String(row.phone ?? '').trim()
-    const studentType = String(row.student_type ?? '').trim()
-    const category = String(row.category ?? '').trim()
+    const studentType = String(row.student_type ?? '').trim() || 'Regular'
+    const category = String(row.category ?? '').trim() || 'General'
     const classItem = classByName.get(String(row.class ?? '').trim().toLowerCase())
     const sectionItem = (sections ?? []).find((item) => item.class_id === classItem?.id && item.name.trim().toLowerCase() === String(row.section ?? '').trim().toLowerCase())
     const admission = String(row.admission_number ?? '').trim()
     if (!studentName) errors.push(`Row ${line}: student_name is required.`)
     if (!studentPhone) errors.push(`Row ${line}: phone is required.`)
-    if (!studentType) errors.push(`Row ${line}: student_type is required.`)
-    if (!category) errors.push(`Row ${line}: category is required.`)
     if (!classItem) errors.push(`Row ${line}: class does not match a class in this school.`)
     if (!sectionItem) errors.push(`Row ${line}: section does not match a section in the selected class.`)
     const date = String(row.date_of_birth ?? '').trim()

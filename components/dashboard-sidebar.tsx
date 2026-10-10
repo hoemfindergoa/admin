@@ -19,7 +19,8 @@ import {
   Building,
   Settings,
   ChevronRight,
-  ArrowLeft
+  ArrowLeft,
+  Package
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -40,6 +41,7 @@ const ALL_NAV_ITEMS = [
   { name: 'Schedules',       href: (id: string) => `/dashboard/${id}/schedules`,    icon: Calendar,        permissionKey: 'schedules', color: 'text-cyan-600' },
   { name: 'Transport',       href: (id: string) => `/dashboard/${id}/transport`,    icon: Bus,             permissionKey: 'transport', color: 'text-yellow-600' },
   { name: 'Hostel',          href: (id: string) => `/dashboard/${id}/hostel`,       icon: Building,        permissionKey: 'hostel', color: 'text-pink-600' },
+  { name: 'Student Kits',    href: (id: string) => `/dashboard/${id}/student-kits`, icon: Package,         permissionKey: 'manage_school', color: 'text-lime-600' },
   { name: 'Settings',        href: (id: string) => `/dashboard/${id}/settings`,     icon: Settings,        permissionKey: 'settings', color: 'text-zinc-600' },
 ]
 

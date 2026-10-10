@@ -51,6 +51,7 @@ export async function createOrganization(formData: FormData) {
   if (crmAccess.isCrmMember) throw new Error('CRM team accounts cannot create school franchises.')
 
   const name = formData.get('name') as string
+  const franchise_brand = formData.get('franchise_brand') as string
   const affiliation = formData.get('affiliation') as string
   const session_start_date = formData.get('session_start_date') as string
   const session_end_date = formData.get('session_end_date') as string
@@ -64,9 +65,7 @@ export async function createOrganization(formData: FormData) {
 
   if (logoFile && logoFile.size > 0) {
     const ext = logoFile.name.split('.').pop()
-    const fileName = `new-${Date.now()}.${ext}` // temporary prefix until we have orgId, or better to generate an ID first. 
-    // Actually, createOrganization inserts and returns the ID. So let's insert first, then upload, then update?
-    // Let's just upload with a UUID or timestamp for now.
+    const fileName = `new-${Date.now()}.${ext}`
     const uniqueId = crypto.randomUUID()
     const finalFileName = `${uniqueId}.${ext}`
     
@@ -93,6 +92,7 @@ export async function createOrganization(formData: FormData) {
       {
         owner_id: user.id,
         name,
+        franchise_brand,
         affiliation,
         session_start_date,
         session_end_date,
@@ -122,6 +122,7 @@ export async function updateOrganization(orgId: string, formData: FormData) {
   if (!user) throw new Error('Not authenticated')
 
   const name = formData.get('name') as string
+  const franchise_brand = formData.get('franchise_brand') as string
   const affiliation = formData.get('affiliation') as string
   const session_start_date = formData.get('session_start_date') as string
   const session_end_date = formData.get('session_end_date') as string
@@ -157,6 +158,7 @@ export async function updateOrganization(orgId: string, formData: FormData) {
     .from('organizations')
     .update({
       name,
+      franchise_brand,
       affiliation,
       session_start_date,
       session_end_date,

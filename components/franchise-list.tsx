@@ -1,22 +1,32 @@
 'use client'
 
 import { useState } from 'react'
-import { Building2, Plus, Search } from 'lucide-react'
+import { Building2, Plus, Search, Tag } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { CreateFranchiseSheet } from '@/components/create-franchise-sheet'
 import { EditFranchiseSheet } from '@/components/edit-franchise-sheet'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 export function FranchiseList({ allOrgs, ownedOrgIds }: { allOrgs: any[], ownedOrgIds: string[] }) {
   const [search, setSearch] = useState('')
+  const [brandFilter, setBrandFilter] = useState<string>('ALL')
 
-  const filteredOrgs = allOrgs.filter(org => 
-    org.name?.toLowerCase().includes(search.toLowerCase()) || 
-    org.course_type?.toLowerCase().includes(search.toLowerCase()) ||
-    org.email?.toLowerCase().includes(search.toLowerCase()) ||
-    org.phone?.toLowerCase().includes(search.toLowerCase())
-  )
+  const filteredOrgs = allOrgs.filter(org => {
+    const matchesSearch = 
+      org.name?.toLowerCase().includes(search.toLowerCase()) || 
+      org.course_type?.toLowerCase().includes(search.toLowerCase()) ||
+      org.email?.toLowerCase().includes(search.toLowerCase()) ||
+      org.phone?.toLowerCase().includes(search.toLowerCase())
+
+    const matchesBrand = brandFilter === 'ALL' || org.franchise_brand === brandFilter
+
+    return matchesSearch && matchesBrand
+  })
+
+  // Extract unique brands for the filter dropdown
+  const uniqueBrands = Array.from(new Set(allOrgs.map(org => org.franchise_brand).filter(Boolean))) as string[]
 
   if (allOrgs.length === 0) {
     return (
@@ -44,7 +54,7 @@ export function FranchiseList({ allOrgs, ownedOrgIds }: { allOrgs: any[], ownedO
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="relative w-full max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
           <Input 
@@ -54,13 +64,32 @@ export function FranchiseList({ allOrgs, ownedOrgIds }: { allOrgs: any[], ownedO
             className="pl-9 bg-white border-zinc-200 h-10 shadow-sm rounded-xl focus-visible:ring-indigo-500"
           />
         </div>
+        
+        {uniqueBrands.length > 0 && (
+          <div className="w-full sm:w-auto">
+            <Select value={brandFilter} onValueChange={setBrandFilter}>
+              <SelectTrigger className="w-full sm:w-[220px] bg-white h-10 rounded-xl shadow-sm border-zinc-200 font-medium">
+                <div className="flex items-center gap-2">
+                  <Tag className="w-4 h-4 text-zinc-400" />
+                  <SelectValue placeholder="Filter by Brand" />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All Brands</SelectItem>
+                {uniqueBrands.map(brand => (
+                  <SelectItem key={brand} value={brand}>{brand}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </div>
 
       {filteredOrgs.length === 0 ? (
         <div className="text-center py-16 text-zinc-500 bg-white border border-zinc-200 rounded-2xl border-dashed">
-          <p className="font-medium text-[15px]">No franchises found matching "{search}"</p>
-          <Button variant="link" onClick={() => setSearch('')} className="mt-2 text-indigo-600">
-            Clear search
+          <p className="font-medium text-[15px]">No franchises found matching "{search}" {brandFilter !== 'ALL' && `and brand "${brandFilter}"`}</p>
+          <Button variant="link" onClick={() => { setSearch(''); setBrandFilter('ALL'); }} className="mt-2 text-indigo-600">
+            Clear filters
           </Button>
         </div>
       ) : (
@@ -70,7 +99,7 @@ export function FranchiseList({ allOrgs, ownedOrgIds }: { allOrgs: any[], ownedO
             return (
               <div key={org.id} className="flex flex-col rounded-2xl border border-zinc-200 bg-white shadow-sm hover:shadow-md hover:border-zinc-300 transition-all overflow-hidden group">
                 <div className="flex flex-row items-start justify-between px-6 py-5 border-b border-zinc-100 bg-zinc-50/30">
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 w-full">
                     {org.logo_url ? (
                       <img src={org.logo_url} alt={org.name} className="h-10 w-10 shrink-0 rounded-lg object-contain bg-white ring-1 ring-zinc-200/50 p-0.5" />
                     ) : (
@@ -78,9 +107,18 @@ export function FranchiseList({ allOrgs, ownedOrgIds }: { allOrgs: any[], ownedO
                         <Building2 className="h-5 w-5 text-zinc-400" />
                       </div>
                     )}
-                    <div className="space-y-0.5">
-                      <h3 className="text-[17px] font-bold text-zinc-900 tracking-tight">{org.name}</h3>
-                      <p className="text-[13px] font-medium text-zinc-500">{org.course_type} • {org.affiliation || 'No Affiliation'}</p>
+                    <div className="space-y-1 flex-1 pr-4">
+                      <div className="flex flex-col">
+                        <h3 className="text-[17px] font-bold text-zinc-900 tracking-tight leading-tight">{org.name}</h3>
+                        {org.franchise_brand && (
+                          <div className="mt-1">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-100 uppercase tracking-wider">
+                              {org.franchise_brand}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-[12px] font-medium text-zinc-500 mt-1">{org.course_type} • {org.affiliation || 'No Affiliation'}</p>
                     </div>
                   </div>
                   {userOwnsOrg && (

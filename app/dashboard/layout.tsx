@@ -4,6 +4,7 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { getCrmAccess } from '@/utils/crm-access'
 import { DashboardUserNav } from '@/components/dashboard-user-nav'
+import { AdminSidebar } from '@/components/admin-sidebar'
 
 export default async function DashboardRootLayout({
   children,
@@ -22,14 +23,9 @@ export default async function DashboardRootLayout({
   }
   return (
     <div className="flex min-h-screen w-full bg-zinc-50/50">
-      <div className="flex flex-col sm:gap-4 sm:py-0 w-full min-w-0">
-        <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b border-zinc-200 bg-white/90 px-6 justify-between backdrop-blur-md">
-          <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white p-1 shadow-sm ring-1 ring-zinc-200 overflow-hidden">
-              <img src="/logonew.png" alt="Logo" className="h-full w-full object-contain" />
-            </div>
-            <div className="font-semibold text-[15px] tracking-tight text-zinc-900">Admin Portal</div>
-          </div>
+      <AdminSidebar />
+      <div className="flex flex-col sm:gap-4 sm:py-0 w-full min-w-0 h-screen overflow-y-auto">
+        <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b border-zinc-200 bg-white/90 px-6 justify-end backdrop-blur-md">
           <div className="flex items-center gap-4">
              <DashboardUserNav 
                email={user?.email} 

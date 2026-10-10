@@ -1,7 +1,7 @@
 import { getOrganizations } from './actions'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Banknote, BookOpen, Building2, GraduationCap, Plus, Users } from "lucide-react"
+import { Banknote, BookOpen, Building2, GraduationCap, Plus, Users, Package } from "lucide-react"
 import Link from 'next/link'
 import { CreateFranchiseSheet } from '@/components/create-franchise-sheet'
 import { EditFranchiseSheet } from '@/components/edit-franchise-sheet'
