@@ -2,7 +2,24 @@
 
 import { useMemo } from 'react'
 import Link from 'next/link'
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
+import {
+  BarChart as RechartsBarChart,
+  Bar as RechartsBar,
+  XAxis as RechartsXAxis,
+  YAxis as RechartsYAxis,
+  Tooltip as RechartsTooltip,
+  ResponsiveContainer as RechartsResponsiveContainer,
+  CartesianGrid as RechartsCartesianGrid,
+} from 'recharts'
+
+// Cast to any to resolve React 18 vs 19 type mismatch in recharts JSX elements
+const BarChart = RechartsBarChart as any
+const Bar = RechartsBar as any
+const XAxis = RechartsXAxis as any
+const YAxis = RechartsYAxis as any
+const Tooltip = RechartsTooltip as any
+const ResponsiveContainer = RechartsResponsiveContainer as any
+const CartesianGrid = RechartsCartesianGrid as any
 import { GraduationCap, Users, Building2, BookOpen, Banknote, Receipt, School, CalendarCheck, Clock, Flag, ChevronRight, MessageSquare, Bus } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -118,7 +135,6 @@ export function DashboardInteractive({
               <CardContent className="p-6">
                 {chartData.length > 0 ? (
                   <div className="h-[300px] w-full">
-                    {/* @ts-ignore - known type mismatch between recharts and project React versions */}
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e4e4e7" />

@@ -166,7 +166,7 @@ export function CrmMembersWorkspace({ members, workspaceId }: { members: CrmMemb
         <div>
           <p className="text-[13px] font-medium text-zinc-900">Role access</p>
           <p className="mt-1 text-[12px] text-zinc-500 leading-relaxed">
-            Super admins control invitations and access. Sales managers can see and assign all sales records. Sales representatives see records assigned to them and unassigned prospects.
+            Super admins control invitations and access. Sales managers can see and assign all sales records. Sales representatives see only records assigned to them.
           </p>
         </div>
       </div>

@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
 import { createClient } from '@/utils/supabase/server'
 import { getCrmAccess } from '@/utils/crm-access'
+import { getCrmNotificationSnapshotForUser } from '@/utils/crm-notifications'
 import { CrmShell } from '@/components/crm-shell'
 
 export default async function CrmWorkspaceLayout({
@@ -19,12 +20,11 @@ export default async function CrmWorkspaceLayout({
   const access = await getCrmAccess(user.id, workspaceId)
   if (!access.canAccessCrm) redirect('/crm')
 
-  const { count } = await supabase
-    .from('crm_activities')
-    .select('*', { count: 'exact', head: true })
-    .eq('crm_workspace_id', access.crmWorkspaceId)
-    .eq('owner_user_id', user.id)
-    .is('completed_at', null)
+  const [activityResult, notificationSnapshot] = await Promise.all([
+    supabase.from('crm_activities').select('*', { count: 'exact', head: true })
+      .eq('crm_workspace_id', access.crmWorkspaceId).eq('owner_user_id', user.id).is('completed_at', null),
+    getCrmNotificationSnapshotForUser(access.crmWorkspaceId, user.id).catch(() => null),
+  ])
 
   return (
     <CrmShell
@@ -32,7 +32,13 @@ export default async function CrmWorkspaceLayout({
       isSuperAdmin={access.isSuperAdmin}
       role={access.crmUser?.role ?? 'SUPER_ADMIN'}
       name={access.crmUser?.name ?? user.user_metadata?.full_name ?? user.email ?? 'CRM user'}
-      notificationCount={count || 0}
+      email={user.email ?? undefined}
+      avatarUrl={user.user_metadata?.avatar_url ?? user.user_metadata?.picture ?? null}
+      notificationCount={notificationSnapshot?.activityCount ?? activityResult.count ?? 0}
+      unreadMessageCount={notificationSnapshot?.unreadMessages ?? 0}
+      initialLatestMessageId={notificationSnapshot?.latestMessageId ?? null}
+      initialLatestAssignmentId={notificationSnapshot?.latestAssignmentId ?? null}
+      initialNotificationSnapshotReady={notificationSnapshot !== null}
     >
       {children}
     </CrmShell>

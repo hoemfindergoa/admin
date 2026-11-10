@@ -6,6 +6,7 @@ import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { getCrmAccess } from '@/utils/crm-access'
 import { any } from 'zod'
+import { recordCrmLeadPerformanceEvent } from '@/utils/crm-performance'
 
 const validModules = ['leads', 'accounts', 'contacts', 'deals', 'activities', 'campaigns', 'automation_rules'] as const
 type Module = typeof validModules[number]
@@ -35,7 +36,7 @@ function isManager(access: any) {
 }
 
 function canEditRecord(access: any, userId: string, ownerId: string | null) {
-  return isManager(access) || ownerId === userId || ownerId == null
+  return isManager(access) || ownerId === userId
 }
 
 function cleanPayload(module: Module, payload: Record<string, any>, userId: string, access: any, creating = false) {
@@ -86,10 +87,17 @@ export async function getCrmData(workspaceId: string) {
     admin.from('crm_automation_rules').select('*').eq('crm_workspace_id', access.crmWorkspaceId).order('created_at', { ascending: false }),
   ])
   for (const result of [leads, accounts, contacts, deals, activities, campaigns, notes, members, rules]) if (result.error) throw new Error(result.error.message)
-  const privateRows = (rows: any[]) => isManager(access) ? rows : rows.filter((row) => !row.owner_user_id || row.owner_user_id === user.id)
+  // Members only receive records explicitly assigned to them. Unassigned leads
+  // stay in the manager's queue and must not leak through server actions.
+  const privateRows = (rows: any[]) => isManager(access) ? rows : rows.filter((row) => row.owner_user_id === user.id)
+  const visibleActivities = (activities.data ?? []).filter((activity: any) => {
+    // A lead reminder belongs to its assignee, including when a manager loads team-wide activity data.
+    if (activity.reminder_at && activity.owner_user_id !== user.id) return false
+    return isManager(access) || activity.owner_user_id === user.id
+  })
   const visible = {
     leads: privateRows(leads.data ?? []), accounts: privateRows(accounts.data ?? []), contacts: privateRows(contacts.data ?? []), deals: privateRows(deals.data ?? []),
-    activities: privateRows(activities.data ?? []).sort((a, b) => !a.due_at ? 1 : !b.due_at ? -1 : new Date(a.due_at).getTime() - new Date(b.due_at).getTime()),
+    activities: visibleActivities.sort((a, b) => !a.due_at ? 1 : !b.due_at ? -1 : new Date(a.due_at).getTime() - new Date(b.due_at).getTime()),
   }
   const allowedNotes = new Set([...visible.leads.map((row) => `LEAD:${row.id}`), ...visible.accounts.map((row) => `ACCOUNT:${row.id}`), ...visible.contacts.map((row) => `CONTACT:${row.id}`), ...visible.deals.map((row) => `DEAL:${row.id}`)])
   return {
@@ -109,8 +117,12 @@ export async function createCrmRecord(workspaceId: string, module: Module, paylo
   const { data, error } = await supabase.from(tableByModule[module]).insert(values).select('*').single()
   if (error) throw new Error(error.message)
 
-  if (module === 'leads') await createLeadFollowUps(admin, user.id, [data])
+  if (module === 'leads') {
+    await createLeadFollowUps(admin, user.id, [data])
+    await recordCrmLeadPerformanceEvent(admin, { workspaceId: access.crmWorkspaceId, leadId: data.id, actorUserId: user.id, eventType: 'ASSIGNED', assignedToUserId: data.owner_user_id ?? user.id })
+  }
   revalidatePath(`/crm/${workspaceId}`)
+  if (module === 'leads') revalidatePath(`/crm/${workspaceId}/performance`)
   return data
 }
 
@@ -127,7 +139,17 @@ export async function updateCrmRecord(workspaceId: string, module: Module, id: s
   if (module === 'leads') { values.updated_by = user.id; values.updated_by_email = user.email ?? null }
   const { error } = await supabase.from(tableByModule[module]).update(values).eq('crm_workspace_id', access.crmWorkspaceId).eq('id', id)
   if (error) throw new Error(error.message)
+  if (module === 'leads') {
+    const newOwnerId = values.owner_user_id ?? current.owner_user_id ?? user.id
+    if (values.owner_user_id && values.owner_user_id !== current.owner_user_id) {
+      await recordCrmLeadPerformanceEvent(admin, { workspaceId: access.crmWorkspaceId, leadId: id, actorUserId: user.id, eventType: 'ASSIGNED', assignedToUserId: values.owner_user_id })
+    }
+    if (values.status && values.status !== current.status && ['WON', 'CONVERTED'].includes(values.status)) {
+      await recordCrmLeadPerformanceEvent(admin, { workspaceId: access.crmWorkspaceId, leadId: id, actorUserId: user.id, eventType: 'CLOSED', assignedToUserId: newOwnerId, status: values.status })
+    }
+  }
   revalidatePath(`/crm/${workspaceId}`)
+  if (module === 'leads') revalidatePath(`/crm/${workspaceId}/performance`)
 }
 
 export async function deleteCrmRecord(workspaceId: string, module: Module, id: string) {
@@ -155,8 +177,11 @@ export async function convertCrmLeadToDeal(workspaceId: string, leadId: string, 
   if (contactError) throw new Error(contactError.message)
   const { error: dealError } = await admin.from('crm_deals').insert({ crm_workspace_id: access.crmWorkspaceId, name: dealName.trim() || `${lead.company_name} opportunity`, account_id: account.id, contact_id: contact.id, lead_id: lead.id, value: Math.max(0, Number(dealValue) || 0), stage: 'QUALIFICATION', probability: 20, owner_user_id: lead.owner_user_id ?? user.id, created_by: user.id })
   if (dealError) throw new Error(dealError.message)
-  await admin.from('crm_leads').update({ status: 'CONVERTED', owner_user_id: lead.owner_user_id ?? user.id, updated_by: user.id, updated_by_email: user.email ?? null }).eq('crm_workspace_id', access.crmWorkspaceId).eq('id', lead.id)
+  const { error: closeError } = await admin.from('crm_leads').update({ status: 'CONVERTED', owner_user_id: lead.owner_user_id ?? user.id, updated_by: user.id, updated_by_email: user.email ?? null }).eq('crm_workspace_id', access.crmWorkspaceId).eq('id', lead.id)
+  if (closeError) throw new Error(closeError.message)
+  await recordCrmLeadPerformanceEvent(admin, { workspaceId: access.crmWorkspaceId, leadId: lead.id, actorUserId: user.id, eventType: 'CLOSED', assignedToUserId: lead.owner_user_id ?? user.id, status: 'CONVERTED' })
   revalidatePath(`/crm/${workspaceId}`)
+  revalidatePath(`/crm/${workspaceId}/performance`)
 }
 
 export async function createCrmNote(workspaceId: string, parentType: string, parentId: string, body: string) {
@@ -185,7 +210,9 @@ export async function importCrmLeads(workspaceId: string, rows: Record<string, s
   const { data: created, error } = await admin.from('crm_leads').insert(values).select('id, company_name, owner_user_id, crm_workspace_id')
   if (error) throw new Error(error.message)
   await createLeadFollowUps(admin, user.id, created ?? [])
+  await Promise.all((created ?? []).map((lead: any) => recordCrmLeadPerformanceEvent(admin, { workspaceId: access.crmWorkspaceId, leadId: lead.id, actorUserId: user.id, eventType: 'ASSIGNED', assignedToUserId: lead.owner_user_id })))
   revalidatePath(`/crm/${workspaceId}`)
+  revalidatePath(`/crm/${workspaceId}/performance`)
   return values.length
 }
 

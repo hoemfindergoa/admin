@@ -1,277 +1,210 @@
 import Link from 'next/link'
-import { ArrowRight, Briefcase, CalendarClock, CircleDollarSign, Contact, TrendingUp, Users, Building2 as Building2Icon, Megaphone as MegaphoneIcon, AlertCircle, CheckCircle2, Globe, Instagram, Facebook, Twitter, Mail, Linkedin, Smartphone } from 'lucide-react'
+import {
+  AlertCircle, ArrowRight, Building2, CheckCircle2, Contact, Facebook,
+  Globe, Instagram, Mail, Megaphone, MessageSquareText, Smartphone,
+  Target, Twitter, Users,
+} from 'lucide-react'
+import { CrmRemindersPanel } from '@/components/crm-reminders-panel'
 
-const money = (value: number) =>
-  new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(value || 0)
+const terminalLeadStatuses = new Set(['WON', 'CONVERTED', 'LOST', 'DELETED'])
+const successfulLeadStatuses = new Set(['WON', 'CONVERTED'])
 
-const dateLabel = (value?: string | null) =>
-  value ? new Date(value).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '—'
-
-const stageColors: Record<string, string> = {
-  QUALIFICATION: 'bg-blue-500',
-  NEEDS_ANALYSIS: 'bg-purple-500',
-  PROPOSAL: 'bg-amber-500',
-  NEGOTIATION: 'bg-orange-500',
-  CLOSED_WON: 'bg-emerald-500',
-  CLOSED_LOST: 'bg-rose-500',
+const statusTone: Record<string, { label: string; color: string; badge: string }> = {
+  NEW: { label: 'New', color: 'bg-info', badge: 'badge-info' },
+  CONTACTED: { label: 'Contacted', color: 'bg-warning', badge: 'badge-warning' },
+  QUALIFIED: { label: 'Qualified', color: 'bg-success', badge: 'badge-success' },
+  PROPOSAL: { label: 'Proposal', color: 'bg-secondary', badge: 'badge-secondary' },
+  NEGOTIATION: { label: 'Negotiation', color: 'bg-warning', badge: 'badge-warning' },
+  WON: { label: 'Won', color: 'bg-success', badge: 'badge-success' },
+  CONVERTED: { label: 'Converted', color: 'bg-success', badge: 'badge-success' },
+  LOST: { label: 'Lost', color: 'bg-error', badge: 'badge-error' },
 }
 
 function SourceIcon({ source }: { source?: string }) {
-  if (!source) return <Globe className="h-3 w-3 text-zinc-400" />
-  const s = source.toLowerCase()
-  if (s.includes('instagram') || s.includes('ig')) return <Instagram className="h-3 w-3 text-pink-600" />
-  if (s.includes('facebook') || s.includes('fb')) return <Facebook className="h-3 w-3 text-blue-600" />
-  if (s.includes('twitter') || s.includes('x')) return <Twitter className="h-3 w-3 text-sky-500" />
-  if (s.includes('linkedin')) return <Linkedin className="h-3 w-3 text-blue-700" />
-  if (s.includes('email') || s.includes('mail')) return <Mail className="h-3 w-3 text-amber-500" />
-  if (s.includes('phone') || s.includes('call')) return <Smartphone className="h-3 w-3 text-emerald-600" />
-  return <Globe className="h-3 w-3 text-blue-500" />
+  if (!source) return <Globe className="h-3.5 w-3.5 text-base-content/45" />
+  const value = source.toLowerCase()
+  if (value.includes('instagram') || value.includes('ig')) return <Instagram className="h-3.5 w-3.5 text-pink-600" />
+  if (value.includes('facebook') || value.includes('fb')) return <Facebook className="h-3.5 w-3.5 text-blue-600" />
+  if (value.includes('twitter') || value === 'x') return <Twitter className="h-3.5 w-3.5 text-sky-600" />
+  if (value.includes('linkedin')) return <Contact className="h-3.5 w-3.5 text-blue-700" />
+  if (value.includes('email') || value.includes('mail')) return <Mail className="h-3.5 w-3.5 text-amber-600" />
+  if (value.includes('phone') || value.includes('call')) return <Smartphone className="h-3.5 w-3.5 text-emerald-600" />
+  return <Globe className="h-3.5 w-3.5 text-base-content/45" />
+}
+
+function shortDate(value?: string | null) {
+  if (!value) return ''
+  return new Date(value).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
 }
 
 export function CrmHome({ data }: { data: any }) {
-  const { leads, deals, activities, contacts, accounts, campaigns, members } = data
-  const openDeals = deals.filter((d: any) => !['CLOSED_WON', 'CLOSED_LOST'].includes(d.stage))
-  const wonValue = deals.filter((d: any) => d.stage === 'CLOSED_WON').reduce((s: number, d: any) => s + Number(d.value || 0), 0)
-  const pipeline = openDeals.reduce((s: number, d: any) => s + Number(d.value || 0), 0)
-  const weighted = openDeals.reduce((s: number, d: any) => s + Number(d.value || 0) * Number(d.probability || 0) / 100, 0)
-  const overdue = activities.filter((a: any) => !a.completed_at && a.due_at && new Date(a.due_at) < new Date())
-  const upcoming = activities.filter((a: any) => !a.completed_at && a.due_at && new Date(a.due_at) >= new Date()).slice(0, 5)
+  const { leads, activities, contacts, accounts, campaigns, members, notes } = data
+  const isManager = data.access.isSuperAdmin || ['SALES_MANAGER', 'CRM_ADMIN'].includes(data.access.role)
+  const visibleLeads = leads.filter((lead: any) => lead.status !== 'DELETED')
+  const openActivities = activities.filter((activity: any) => !activity.completed_at)
+  const overdue = openActivities.filter((activity: any) => {
+    const dueAt = activity.reminder_at ?? activity.due_at
+    return dueAt && new Date(dueAt) < new Date()
+  })
+  const openActions = [...openActivities]
+    .sort((a: any, b: any) => {
+      const reminderPriority = Number(!!b.reminder_at) - Number(!!a.reminder_at)
+      if (reminderPriority) return reminderPriority
+      const aDue = a.reminder_at ?? a.due_at
+      const bDue = b.reminder_at ?? b.due_at
+      if (!aDue) return 1
+      if (!bDue) return -1
+      return new Date(aDue).getTime() - new Date(bDue).getTime()
+    })
+    .slice(0, 5)
 
-  const stages = [
-    ['QUALIFICATION', 'Qualification'],
-    ['NEEDS_ANALYSIS', 'Needs Analysis'],
-    ['PROPOSAL', 'Proposal'],
-    ['NEGOTIATION', 'Negotiation'],
-    ['CLOSED_WON', 'Won'],
-    ['CLOSED_LOST', 'Lost'],
-  ]
-  const stageCounts = stages.map(([stage, label]) => ({
-    stage, label,
-    count: deals.filter((d: any) => d.stage === stage).length,
-    amount: deals.filter((d: any) => d.stage === stage).reduce((s: number, d: any) => s + Number(d.value || 0), 0),
+  const leadCount = visibleLeads.length
+  const assignedCount = visibleLeads.filter((lead: any) => !!lead.owner_user_id).length
+  const unassignedCount = visibleLeads.filter((lead: any) => !lead.owner_user_id).length
+  const newLeadCount = visibleLeads.filter((lead: any) => lead.status === 'NEW').length
+  const successfulCount = visibleLeads.filter((lead: any) => successfulLeadStatuses.has(lead.status)).length
+  const activeLeadCount = visibleLeads.filter((lead: any) => !terminalLeadStatuses.has(lead.status)).length
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const dueLeadCount = visibleLeads.filter((lead: any) => lead.next_follow_up && new Date(`${lead.next_follow_up}T00:00:00`) <= today && !terminalLeadStatuses.has(lead.status)).length
+  const activeMembers = members.filter((member: any) => member.status === 'ACTIVE')
+
+  const metricCards = isManager
+    ? [
+        { label: 'Total leads', value: leadCount, detail: `${activeLeadCount} active in the pipeline`, icon: Contact, tone: 'bg-primary/10 text-primary' },
+        { label: 'Assigned', value: assignedCount, detail: `Across ${activeMembers.length} active teammates`, icon: Users, tone: 'bg-info/10 text-info' },
+        { label: 'Needs assignment', value: unassignedCount, detail: 'Waiting in the admin queue', icon: Target, tone: 'bg-warning/15 text-warning' },
+        { label: 'Successful leads', value: successfulCount, detail: 'Won or converted', icon: CheckCircle2, tone: 'bg-success/10 text-success' },
+      ]
+    : [
+        { label: 'My assigned leads', value: leadCount, detail: `${activeLeadCount} active leads to work`, icon: Contact, tone: 'bg-primary/10 text-primary' },
+        { label: 'New leads', value: newLeadCount, detail: 'Waiting for first contact', icon: Target, tone: 'bg-info/10 text-info' },
+        { label: 'Follow-ups due', value: dueLeadCount, detail: 'Today or overdue', icon: AlertCircle, tone: 'bg-warning/15 text-warning' },
+        { label: 'Successful leads', value: successfulCount, detail: 'Won or converted', icon: CheckCircle2, tone: 'bg-success/10 text-success' },
+      ]
+
+  const statusOrder: (keyof typeof statusTone)[] = ['NEW', 'CONTACTED', 'QUALIFIED', 'PROPOSAL', 'NEGOTIATION', 'WON', 'CONVERTED', 'LOST']
+  const statusCounts = statusOrder.map((status) => ({
+    status,
+    count: visibleLeads.filter((lead: any) => lead.status === status).length,
+    ...statusTone[status],
   }))
-  const maxAmount = Math.max(...stageCounts.map(s => s.amount), 1)
+  const maxStatusCount = Math.max(...statusCounts.map((status) => status.count), 1)
+
+  const latestNoteByLead = new Map<string, any>()
+  for (const note of notes ?? []) {
+    if (note.parent_type === 'LEAD' && !latestNoteByLead.has(note.parent_id)) latestNoteByLead.set(note.parent_id, note)
+  }
+  const memberNameByUserId = new Map<string, string>(members.map((member: any) => [member.user_id, member.name || member.email || 'Team member']))
 
   const glance = [
-    [Contact, 'Contacts', contacts.length, 'contacts'],
-    [Building2Icon, 'Accounts', accounts.length, 'accounts'],
-    [MegaphoneIcon, 'Campaigns', campaigns.length, 'campaigns'],
-  ] as const
+    { label: 'Contacts', count: contacts.length, href: 'contacts', icon: Contact },
+    { label: 'Accounts', count: accounts.length, href: 'accounts', icon: Building2 },
+    { label: 'Campaigns', count: campaigns.length, href: 'campaigns', icon: Megaphone },
+  ]
   const workspaceId = data.access.workspaceId
   const base = `/crm/${workspaceId}`
 
   return (
-    <div className="space-y-8 pb-16">
-      {/* Page header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="space-y-6 pb-12">
+      <section className="card card-border flex flex-col gap-4 rounded-2xl bg-base-100 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
         <div>
-          <p className="text-[12px] font-bold uppercase tracking-widest text-indigo-600 mb-1">Growth Workspace</p>
-          <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Overview</h1>
+          <p className="mb-1 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[.14em] text-primary"><span className="h-1.5 w-1.5 rounded-full bg-primary" />Sales CRM</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-base-content sm:text-[28px]">Overview</h1>
+          <p className="mt-1 text-sm text-base-content/60">{isManager ? 'Workspace lead volume, assignment queue, and team follow-ups.' : 'Your assigned leads, follow-ups, and latest team updates.'}</p>
+          <p className="mt-2 text-xs text-base-content/50">
+            {isManager
+              ? `${leadCount} total · ${assignedCount} assigned · ${unassignedCount} need assignment`
+              : `${leadCount} assigned to you · ${successfulCount} successfully closed`}
+          </p>
         </div>
-        <Link
-          href={`${base}/leads?new=1`}
-          className="inline-flex h-10 items-center gap-2 rounded-full bg-indigo-600 px-5 text-[14px] font-semibold text-white shadow-md hover:bg-indigo-700 hover:shadow-lg transition-all active:scale-95"
-        >
-          + Add prospect
-        </Link>
-      </div>
+        <Link href={`${base}/leads?new=1`} className="btn btn-primary min-h-11 gap-2"><Contact className="h-4 w-4" />Add lead</Link>
+      </section>
 
-      {/* Metric cards */}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {[
-          { label: 'Open Pipeline', value: money(pipeline), sub: `${openDeals.length} active opportunities`, icon: Briefcase, color: 'text-blue-600', bg: 'bg-blue-50' },
-          { label: 'Weighted Forecast', value: money(weighted), sub: 'By deal probability', icon: TrendingUp, color: 'text-purple-600', bg: 'bg-purple-50' },
-          { label: 'Won Revenue', value: money(wonValue), sub: `${deals.filter((d: any) => d.stage === 'CLOSED_WON').length} deals closed`, icon: CircleDollarSign, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-          { label: 'Active Prospects', value: leads.filter((l: any) => !['CONVERTED', 'WON', 'LOST'].includes(l.status)).length, sub: `${leads.length} total leads`, icon: Contact, color: 'text-orange-600', bg: 'bg-orange-50' },
-        ].map(metric => (
-          <div key={metric.label} className="group rounded-2xl border border-zinc-200/60 bg-white p-5 shadow-sm hover:shadow-md hover:border-zinc-300 transition-all">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-[13px] font-medium text-zinc-500">{metric.label}</p>
-                <p className="mt-2.5 text-3xl font-bold tracking-tight text-zinc-900">{metric.value}</p>
-                <p className="mt-1.5 text-[12px] font-medium text-zinc-400">{metric.sub}</p>
-              </div>
-              <span className={`rounded-xl p-2.5 ${metric.bg}`}>
-                <metric.icon className={`h-5 w-5 ${metric.color}`} />
-              </span>
-            </div>
+      <section aria-label="Lead summary" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {metricCards.map(({ label, value, detail, icon: Icon, tone }) => <article key={label} className="card card-border rounded-xl bg-base-100 transition-colors hover:border-primary/30">
+          <div className="card-body gap-3 p-4 sm:p-5">
+            <div className="flex items-center justify-between gap-3"><h2 className="text-sm font-medium text-base-content/65">{label}</h2><span className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl ${tone}`}><Icon className="h-4 w-4" /></span></div>
+            <div><p className="text-3xl font-semibold tracking-tight text-base-content">{value}</p><p className="mt-1 text-xs text-base-content/55">{detail}</p></div>
           </div>
-        ))}
-      </div>
+        </article>)}
+      </section>
 
-      {/* Pipeline + Activities */}
-      <div className="grid gap-6 xl:grid-cols-[1.6fr_1fr]">
-        {/* Deal pipeline */}
-        <div className="rounded-2xl border border-zinc-200/60 bg-white shadow-sm overflow-hidden flex flex-col">
-          <div className="flex items-center justify-between border-b border-zinc-100 bg-zinc-50/50 px-6 py-5">
-            <div>
-              <p className="text-[15px] font-bold text-zinc-900">Deal Pipeline</p>
-              <p className="text-[13px] text-zinc-500 mt-0.5">Open value and opportunities by stage</p>
-            </div>
-            <Link href={`${base}/deals`} className="flex items-center gap-1.5 text-[13px] font-medium text-indigo-600 hover:text-indigo-700 transition-colors">
-              View deals <ArrowRight className="h-4 w-4" />
-            </Link>
+      <section className="grid gap-4 xl:grid-cols-[1.25fr_1fr]">
+        <article className="card card-border overflow-hidden bg-base-100">
+          <header className="flex items-center justify-between gap-3 border-b border-base-300 px-5 py-4 sm:px-6">
+            <div><h2 className="text-sm font-semibold">Lead status overview</h2><p className="mt-1 text-xs text-base-content/55">{isManager ? 'Current status across the workspace' : 'Status of your assigned leads'}</p></div>
+            <Link href={`${base}/leads`} className="btn btn-ghost btn-sm gap-1">View leads <ArrowRight className="h-4 w-4" /></Link>
+          </header>
+          <div className="space-y-4 px-5 py-5 sm:px-6">
+            {statusCounts.map((status) => <div key={status.status}>
+              <div className="mb-1.5 flex items-center justify-between gap-3 text-xs"><span className="font-medium text-base-content/70">{status.label}</span><span className="font-semibold text-base-content">{status.count}</span></div>
+              <div className="h-2 overflow-hidden rounded-full bg-base-200"><div className={`h-full rounded-full ${status.color}`} style={{ width: `${(status.count / maxStatusCount) * 100}%` }} /></div>
+            </div>)}
+            {leadCount === 0 && <p className="py-6 text-center text-sm text-base-content/55">No leads in this view yet.</p>}
           </div>
-          <div className="flex-1 px-6 py-5 space-y-4">
-            {stageCounts.map((s, i) => (
-              <div key={s.stage} className="grid grid-cols-[140px_1fr_90px] items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <div className={`h-2 w-2 rounded-full ${s.stage ? stageColors[s.stage] : 'bg-zinc-300'}`} />
-                  <span className="truncate text-[13px] font-medium text-zinc-600">{s.label}</span>
+        </article>
+
+        <article className="card card-border flex flex-col overflow-hidden bg-base-100">
+          <header className="flex items-center justify-between gap-3 border-b border-base-300 px-5 py-4 sm:px-6">
+            <div><h2 className="text-sm font-semibold">{isManager ? 'Team follow-ups' : 'My next actions'}</h2><p className="mt-1 text-xs text-base-content/55">Reminders assigned to the teammate responsible</p></div>
+            <Link href={`${base}/activities`} className="btn btn-ghost btn-sm gap-1">View all <ArrowRight className="h-4 w-4" /></Link>
+          </header>
+          <div className="flex-1 space-y-3 p-4 sm:p-5">
+            {overdue.length > 0 && <div role="status" className="flex items-center gap-2.5 rounded-lg border border-error/20 bg-error/5 px-3.5 py-3 text-xs font-medium text-error"><AlertCircle className="h-4 w-4 shrink-0" />{overdue.length} overdue follow-up{overdue.length !== 1 ? 's' : ''} need attention</div>}
+            <CrmRemindersPanel workspaceId={workspaceId} activities={openActions} leadNames={Object.fromEntries(leads.map((lead: any) => [lead.id, lead.company_name]))} />
+          </div>
+        </article>
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-[1.8fr_1fr]">
+        <article className="card card-border flex flex-col overflow-hidden bg-base-100">
+          <header className="flex items-center justify-between gap-3 border-b border-base-300 px-5 py-4 sm:px-6">
+            <div><h2 className="text-sm font-semibold">Recently updated leads</h2><p className="mt-1 text-xs text-base-content/55">Latest lead changes and remarks {isManager ? 'from across the workspace' : 'on your assigned leads'}</p></div>
+            <Link href={`${base}/leads`} className="btn btn-ghost btn-sm gap-1">View all <ArrowRight className="h-4 w-4" /></Link>
+          </header>
+          <div className="flex-1 divide-y divide-base-200">
+            {visibleLeads.length === 0 ? <div className="flex flex-col items-center justify-center px-5 py-12 text-center text-base-content/55">
+              <Contact className="mb-3 h-7 w-7 text-base-content/25" /><p className="text-sm font-medium">No leads in this view yet.</p><p className="mt-1 text-xs">New leads will appear here when they are added or assigned.</p>
+            </div> : visibleLeads.slice(0, 6).map((lead: any) => {
+              const note = latestNoteByLead.get(lead.id)
+              const remark = note?.body || lead.notes
+              const noteAuthor = note?.created_by_email?.split('@')[0] || memberNameByUserId.get(note?.created_by) || lead.updated_by_email?.split('@')[0] || memberNameByUserId.get(lead.updated_by)
+              const updatedBy = memberNameByUserId.get(lead.updated_by) || lead.updated_by_email?.split('@')[0]
+              return <article key={lead.id} className="flex items-start gap-3 px-4 py-4 transition-colors hover:bg-base-200/40 sm:px-5">
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-base-300 bg-base-200 text-sm font-semibold text-base-content/75">{lead.company_name.slice(0, 1).toUpperCase()}</span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <h3 className="truncate text-sm font-semibold text-base-content">{lead.company_name}</h3>
+                    <span className={`badge badge-soft border-0 text-[10px] font-semibold uppercase ${statusTone[lead.status]?.badge ?? 'badge-neutral'}`}>{statusTone[lead.status]?.label ?? lead.status.toLowerCase().replaceAll('_', ' ')}</span>
+                  </div>
+                  <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-base-content/55">
+                    <span>{lead.contact_name}</span><span aria-hidden="true">·</span><span className="inline-flex items-center gap-1"><SourceIcon source={lead.source} />{lead.source || 'Website'}</span>
+                    {lead.updated_at && <><span aria-hidden="true">·</span><span>Updated {shortDate(lead.updated_at)}{updatedBy ? ` by ${updatedBy}` : ''}</span></>}
+                  </div>
+                  {remark && <div className="mt-2.5 flex items-start gap-2 rounded-lg bg-base-200/60 px-3 py-2">
+                    <MessageSquareText className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
+                    <div className="min-w-0"><p className="line-clamp-2 whitespace-pre-wrap text-xs leading-5 text-base-content/80">{remark}</p><p className="mt-0.5 text-[10px] text-base-content/50">Remark{noteAuthor ? ` by ${noteAuthor}` : ''}{(note?.created_at || lead.updated_at) ? ` · ${shortDate(note?.created_at || lead.updated_at)}` : ''}</p></div>
+                  </div>}
                 </div>
-                <div className="h-2.5 overflow-hidden rounded-full bg-zinc-100 ring-1 ring-inset ring-zinc-200/50">
-                  <div
-                    className={`h-full rounded-full transition-all duration-500 ${s.stage ? stageColors[s.stage] : 'bg-zinc-300'}`}
-                    style={{ width: `${Math.max(s.amount ? 5 : 0, s.amount / maxAmount * 100)}%` }}
-                  />
-                </div>
-                <span className="text-right text-[13px] font-bold text-zinc-700">{money(s.amount)}</span>
-              </div>
-            ))}
-            {deals.length === 0 && (
-              <p className="py-8 text-center text-[13px] text-zinc-400">No deals yet. Convert a lead to get started.</p>
-            )}
+              </article>
+            })}
           </div>
-        </div>
+        </article>
 
-        {/* Next actions */}
-        <div className="rounded-2xl border border-zinc-200/60 bg-white shadow-sm overflow-hidden flex flex-col">
-          <div className="flex items-center justify-between border-b border-zinc-100 bg-zinc-50/50 px-6 py-5">
-            <div>
-              <p className="text-[15px] font-bold text-zinc-900">
-                {data.access.isSuperAdmin || ['SALES_MANAGER', 'CRM_ADMIN'].includes(data.access.role) ? 'Team Follow-ups' : 'My Next Actions'}
-              </p>
-              <p className="text-[13px] text-zinc-500 mt-0.5">Keep deals moving forward</p>
-            </div>
-            <Link href={`${base}/activities`} className="flex items-center gap-1.5 text-[13px] font-medium text-indigo-600 hover:text-indigo-700 transition-colors">
-              All <ArrowRight className="h-4 w-4" />
-            </Link>
-          </div>
-          <div className="flex-1 px-6 py-4">
-            {overdue.length > 0 && (
-              <div className="mb-4 flex items-center gap-2.5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-[13px] font-medium text-red-700 shadow-sm">
-                <AlertCircle className="h-4 w-4 shrink-0" />
-                {overdue.length} overdue follow-up{overdue.length !== 1 ? 's' : ''} requiring attention
-              </div>
-            )}
-            {upcoming.length === 0 ? (
-              <div className="flex h-32 flex-col items-center justify-center rounded-xl border border-dashed border-zinc-200 bg-zinc-50 text-center text-[13px] text-zinc-500">
-                <CalendarClock className="mb-2 h-6 w-6 text-zinc-400" />
-                No upcoming actions.<br />Add a task or meeting to keep momentum.
-              </div>
-            ) : (
-              <div className="space-y-0 divide-y divide-zinc-100">
-                {upcoming.map((item: any) => (
-                  <div key={item.id} className="group flex items-center gap-3.5 py-3.5 hover:bg-zinc-50/50 rounded-lg px-2 -mx-2 transition-colors">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-indigo-100 bg-indigo-50 shadow-sm">
-                      <CalendarClock className="h-4 w-4 text-indigo-600" />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-[14px] font-bold text-zinc-800">{item.subject}</p>
-                      <p className="text-[12px] font-medium text-zinc-500 mt-0.5 flex items-center gap-1.5">
-                        <span className="capitalize">{item.kind.toLowerCase()}</span>
-                        <span>•</span>
-                        <span className="text-zinc-400">{dateLabel(item.due_at)}</span>
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Leads + Glance */}
-      <div className="grid gap-6 xl:grid-cols-[1.8fr_1fr]">
-        {/* Recent leads */}
-        <div className="rounded-2xl border border-zinc-200/60 bg-white shadow-sm overflow-hidden flex flex-col">
-          <div className="flex items-center justify-between border-b border-zinc-100 bg-zinc-50/50 px-6 py-5">
-            <div>
-              <p className="text-[15px] font-bold text-zinc-900">Recently Updated Leads</p>
-              <p className="text-[13px] text-zinc-500 mt-0.5">Pick up where the team left off</p>
-            </div>
-            <Link href={`${base}/leads`} className="flex items-center gap-1.5 text-[13px] font-medium text-indigo-600 hover:text-indigo-700 transition-colors">
-              View all <ArrowRight className="h-4 w-4" />
-            </Link>
-          </div>
-          <div className="flex-1 divide-y divide-zinc-100">
-            {leads.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center text-zinc-500">
-                <Contact className="mb-3 h-8 w-8 text-zinc-300" />
-                <p className="text-[13px] font-medium">Your first prospect is one quick add away.</p>
-              </div>
-            ) : (
-              leads.slice(0, 6).map((lead: any) => (
-                <div key={lead.id} className="group flex items-center gap-4 px-6 py-4 hover:bg-zinc-50/50 transition-colors">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-zinc-200 bg-white text-[13px] font-bold text-zinc-700 shadow-sm">
-                    {lead.company_name.slice(0, 1).toUpperCase()}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[14px] font-bold text-zinc-900">{lead.company_name}</p>
-                    <div className="flex items-center gap-2 mt-0.5 text-[12px] text-zinc-500 font-medium">
-                      <span className="truncate">{lead.contact_name}</span>
-                      {lead.email && (
-                        <>
-                          <span>•</span>
-                          <span className="truncate text-zinc-400">{lead.email}</span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex flex-col items-end gap-2">
-                    <span className={
-                      `rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${lead.status === 'NEW' ? 'bg-blue-50 text-blue-700 ring-1 ring-blue-600/20' :
-                        lead.status === 'CONTACTED' ? 'bg-amber-50 text-amber-700 ring-1 ring-amber-600/20' :
-                          lead.status === 'QUALIFIED' ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-600/20' :
-                            'bg-zinc-100 text-zinc-600 ring-1 ring-zinc-500/20'
-                      }`
-                    }>
-                      {lead.status.toLowerCase().replaceAll('_', ' ')}
-                    </span>
-                    <div className="flex items-center gap-1 text-[11px] font-medium text-zinc-400" title={`Source: ${lead.source || 'Unknown'}`}>
-                      <SourceIcon source={lead.source} />
-                      {lead.source || 'Website'}
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-
-        {/* At a glance */}
-        <div className="rounded-2xl border border-zinc-200/60 bg-white shadow-sm overflow-hidden flex flex-col">
-          <div className="border-b border-zinc-100 bg-zinc-50/50 px-6 py-5">
-            <p className="text-[15px] font-bold text-zinc-900">Workspace at a Glance</p>
-            <p className="text-[13px] text-zinc-500 mt-0.5">People and records</p>
-          </div>
+        <article className="card card-border flex flex-col overflow-hidden bg-base-100">
+          <header className="border-b border-base-300 px-5 py-4 sm:px-6"><h2 className="text-sm font-semibold">Workspace at a glance</h2><p className="mt-1 text-xs text-base-content/55">People and supporting records</p></header>
           <div className="flex-1 p-3">
-            {data.access.isSuperAdmin && (
-              <Link href={`${base}/team`} className="group flex items-center gap-4 rounded-xl px-4 py-3.5 hover:bg-zinc-50 transition-colors">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-zinc-100 text-zinc-500 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
-                  <Users className="h-4 w-4" />
-                </div>
-                <span className="flex-1 text-[14px] font-medium text-zinc-600 group-hover:text-zinc-900">Team members</span>
-                <span className="text-[14px] font-bold text-zinc-900">{members.length}</span>
-              </Link>
-            )}
-            {glance.map(([Icon, label, count, slug]) => (
-              <Link key={label} href={`${base}/${slug}`} className="group flex items-center gap-4 rounded-xl px-4 py-3.5 hover:bg-zinc-50 transition-colors">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-zinc-100 text-zinc-500 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
-                  <Icon className="h-4 w-4" />
-                </div>
-                <span className="flex-1 text-[14px] font-medium text-zinc-600 group-hover:text-zinc-900">{label}</span>
-                <span className="text-[14px] font-bold text-zinc-900">{count}</span>
-              </Link>
-            ))}
-            <div className="mt-4 flex items-center gap-2 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3">
-              <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-              <span className="text-[12px] font-medium text-emerald-800">Workspace data is fully isolated</span>
-            </div>
+            {isManager && <Link href={`${base}/team`} className="group flex items-center gap-3 rounded-xl px-3 py-3 transition-colors hover:bg-base-200/60">
+              <span className="grid h-9 w-9 place-items-center rounded-lg bg-base-200 text-base-content/60 group-hover:bg-primary/10 group-hover:text-primary"><Users className="h-4 w-4" /></span><span className="flex-1 text-sm font-medium">Active teammates</span><span className="text-sm font-bold">{activeMembers.length}</span>
+            </Link>}
+            {glance.map(({ label, count, href, icon: Icon }) => <Link key={label} href={`${base}/${href}`} className="group flex items-center gap-3 rounded-xl px-3 py-3 transition-colors hover:bg-base-200/60">
+              <span className="grid h-9 w-9 place-items-center rounded-lg bg-base-200 text-base-content/60 group-hover:bg-primary/10 group-hover:text-primary"><Icon className="h-4 w-4" /></span><span className="flex-1 text-sm font-medium">{label}</span><span className="text-sm font-bold">{count}</span>
+            </Link>)}
+            <div className="mt-3 flex items-center gap-2 rounded-xl border border-success/20 bg-success/5 px-3 py-3 text-xs font-medium text-success"><CheckCircle2 className="h-4 w-4 shrink-0" />Workspace data is isolated by team access</div>
           </div>
-        </div>
-      </div>
+        </article>
+      </section>
     </div>
   )
 }
