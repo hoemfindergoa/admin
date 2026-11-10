@@ -24,6 +24,7 @@ import {
   SheetClose,
 } from '@/components/ui/sheet'
 import { updateOrganization, deleteOrganization } from '@/app/dashboard/actions'
+import { FranchiseCommercialFields } from '@/components/franchise-commercial-fields'
 
 interface Org {
   id: string
@@ -37,6 +38,26 @@ interface Org {
   phone?: string | null
   address?: string | null
   logo_url?: string | null
+  franchise_month?: string | null
+  franchise_year?: number | null
+  payment_date?: string | null
+  model?: string | null
+  closure_by?: string | null
+  city?: string | null
+  state?: string | null
+  authorization_code?: string | null
+  client_name?: string | null
+  client_number?: string | null
+  franchise_fee?: number | null
+  gst?: number | null
+  total_franchise_fee?: number | null
+  amount_received?: number | null
+  confirmation?: string | null
+  transaction_details?: string | null
+  incentive_amount?: number | null
+  transaction_date?: string | null
+  manager_name?: string | null
+  manager_amount?: number | null
 }
 
 interface EditFranchiseSheetProps {
@@ -293,6 +314,8 @@ export function EditFranchiseSheet({ org, trigger }: EditFranchiseSheetProps) {
               className="h-10"
             />
           </div>
+
+          <FranchiseCommercialFields idPrefix="ef" disabled={isPending} values={org} />
 
           {error && (
             <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-4 py-3 font-medium">

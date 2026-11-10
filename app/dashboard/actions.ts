@@ -6,6 +6,47 @@ import { revalidatePath } from 'next/cache'
 import { getCrmAccess } from '@/utils/crm-access'
 import { createAdminClient } from '@/utils/supabase/admin'
 
+function getOptionalFranchiseDetails(formData: FormData) {
+  const textFields = [
+    'franchise_month', 'model', 'closure_by', 'city', 'state', 'authorization_code',
+    'client_name', 'client_number', 'confirmation', 'transaction_details', 'manager_name',
+  ] as const
+  const dateFields = ['payment_date', 'transaction_date'] as const
+  const amountFields = [
+    'franchise_fee', 'gst', 'total_franchise_fee', 'amount_received', 'incentive_amount', 'manager_amount',
+  ] as const
+
+  const details: Record<string, string | number | null> = {}
+  for (const field of textFields) {
+    const value = String(formData.get(field) ?? '').trim()
+    details[field] = value || null
+  }
+  for (const field of dateFields) {
+    const value = String(formData.get(field) ?? '').trim()
+    details[field] = value || null
+  }
+  for (const field of amountFields) {
+    const raw = String(formData.get(field) ?? '').trim()
+    if (!raw) {
+      details[field] = null
+      continue
+    }
+    const value = Number(raw)
+    if (!Number.isFinite(value) || value < 0) throw new Error(`${field.replaceAll('_', ' ')} must be a valid non-negative amount.`)
+    details[field] = value
+  }
+
+  const rawYear = String(formData.get('franchise_year') ?? '').trim()
+  if (!rawYear) {
+    details.franchise_year = null
+  } else {
+    const year = Number(rawYear)
+    if (!Number.isInteger(year) || year < 1900 || year > 9999) throw new Error('Year must be between 1900 and 9999.')
+    details.franchise_year = year
+  }
+  return details
+}
+
 export async function getOrganizations() {
   const cookieStore = await cookies()
   const supabase = createClient(cookieStore)
@@ -100,6 +141,7 @@ export async function createOrganization(formData: FormData) {
         email,
         phone,
         address,
+        ...getOptionalFranchiseDetails(formData),
         ...(logo_url !== null ? { logo_url } : {})
       }
     ])
@@ -166,6 +208,7 @@ export async function updateOrganization(orgId: string, formData: FormData) {
       email,
       phone,
       address,
+      ...getOptionalFranchiseDetails(formData),
       ...(logo_url !== null ? { logo_url } : {})
     })
     .eq('id', orgId)

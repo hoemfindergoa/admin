@@ -24,6 +24,7 @@ import {
   SheetClose,
 } from '@/components/ui/sheet'
 import { createOrganization } from '@/app/dashboard/actions'
+import { FranchiseCommercialFields } from '@/components/franchise-commercial-fields'
 
 interface CreateFranchiseSheetProps {
   trigger?: React.ReactNode
@@ -253,6 +254,8 @@ export function CreateFranchiseSheet({ trigger }: CreateFranchiseSheetProps) {
               className="h-10"
             />
           </div>
+
+          <FranchiseCommercialFields idPrefix="sf" disabled={isPending} />
 
           {error && (
             <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-4 py-3 font-medium">
