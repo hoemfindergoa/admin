@@ -3,6 +3,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { addAccount, deleteAccount } from './actions'
 import { Building2, Plus, Trash2, Globe, Phone, Mail, MapPin } from 'lucide-react'
+import { toast } from 'sonner'
 
 export function AccountsPage({ workspaceId, accounts }: { workspaceId: string, accounts: any[] }) {
   const router = useRouter()
@@ -22,11 +23,13 @@ export function AccountsPage({ workspaceId, accounts }: { workspaceId: string, a
     startTransition(async () => {
       try {
         await addAccount(workspaceId, formData)
+        toast.success('Account created successfully.')
         setSuccess('Account created!')
         setShowForm(false)
         ;(e.target as HTMLFormElement).reset()
         router.refresh()
       } catch (err: any) {
+        toast.error(err.message ?? 'Failed to create account.')
         setError(err.message ?? 'Failed to create account.')
       }
     })
@@ -37,8 +40,10 @@ export function AccountsPage({ workspaceId, accounts }: { workspaceId: string, a
     startTransition(async () => {
       try {
         await deleteAccount(workspaceId, id)
+        toast.success('Account deleted successfully.')
         router.refresh()
       } catch (err: any) {
+        toast.error(err.message ?? 'Failed to delete account.')
         setError(err.message ?? 'Failed to delete.')
       }
     })

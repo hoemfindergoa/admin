@@ -10,13 +10,15 @@ import {
   CalendarCheck,
   ChevronRight,
   ArrowLeft,
-  BookOpen
+  BookOpen,
+  ClipboardList,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const NAV_ITEMS = [
   { name: 'Dashboard',       href: (id: string) => `/teacher/${id}`,             icon: LayoutDashboard, color: 'text-indigo-600' },
   { name: 'My Classes',      href: (id: string) => `/teacher/${id}/classes`,     icon: BookOpen,        color: 'text-emerald-600' },
+  { name: 'Homework & Notes', href: (id: string) => `/teacher/${id}/updates`,    icon: ClipboardList, color: 'text-violet-600' },
   { name: 'Attendance',      href: (id: string) => `/teacher/${id}/attendance`,  icon: CalendarCheck,   color: 'text-teal-600' },
   { name: 'Communication',   href: (id: string) => `/teacher/${id}/communication`,icon: MessageSquare,   color: 'text-blue-600' },
 ]

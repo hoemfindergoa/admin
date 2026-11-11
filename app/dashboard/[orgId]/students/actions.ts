@@ -170,7 +170,8 @@ async function linkOrInviteParent(admin: ReturnType<typeof createAdminClient>, o
   }
   let parentStatus = 'PENDING'
   if (!parent.user_id) {
-    const parentNext = encodeURIComponent(process.env.NEXT_PUBLIC_PARENT_APP_URL ?? '/')
+    const parentAppUrl = process.env.NEXT_PUBLIC_PARENT_APP_URL
+    const parentNext = encodeURIComponent(parentAppUrl && parentAppUrl !== '/' ? parentAppUrl : `/parent/${orgId}`)
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? process.env.SITE_URL ?? 'http://localhost:3000'
     const { data: invitation, error: inviteError } = await admin.auth.admin.inviteUserByEmail(normalizedEmail, {
       data: { full_name: name, role: 'PARENT', org_id: orgId, parent_id: parent.id }, redirectTo: `${siteUrl}/set-password?next=${parentNext}`,
@@ -340,7 +341,8 @@ export async function importStudents(orgId: string, rows: StudentImportRow[]) {
         parent = createdParent
       }
       if (!parent.user_id) {
-        const parentAppUrl = process.env.NEXT_PUBLIC_PARENT_APP_URL ?? '/'
+        const configuredParentUrl = process.env.NEXT_PUBLIC_PARENT_APP_URL
+        const parentAppUrl = configuredParentUrl && configuredParentUrl !== '/' ? configuredParentUrl : `/parent/${orgId}`
         const parentNext = encodeURIComponent(parentAppUrl)
         const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? process.env.SITE_URL ?? 'http://localhost:3000'
         const redirectTo = `${siteUrl}/set-password?next=${parentNext}`

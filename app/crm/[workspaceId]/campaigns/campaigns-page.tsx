@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { addCampaign, updateCampaignStatus, deleteCampaign } from './actions'
 import { Megaphone, Plus, Trash2 } from 'lucide-react'
+import { toast } from 'sonner'
 
 const CHANNELS = ['Email', 'SMS', 'WhatsApp', 'Instagram', 'Facebook', 'Google Ads', 'Referral', 'Event', 'Other']
 const STATUSES = ['DRAFT', 'ACTIVE', 'PAUSED', 'COMPLETED', 'CANCELLED']
@@ -45,11 +46,13 @@ export function CampaignsPage({
     startTransition(async () => {
       try {
         await addCampaign(workspaceId, formData)
+        toast.success('Campaign created successfully.')
         setSuccess('Campaign created!')
         setShowForm(false)
         ;(e.target as HTMLFormElement).reset()
         router.refresh()
       } catch (err: any) {
+        toast.error(err.message ?? 'Failed to create campaign.')
         setError(err.message ?? 'Failed to create campaign.')
       }
     })
@@ -59,8 +62,10 @@ export function CampaignsPage({
     startTransition(async () => {
       try {
         await updateCampaignStatus(workspaceId, id, status)
+        toast.success('Campaign status updated.')
         router.refresh()
       } catch (err: any) {
+        toast.error(err.message ?? 'Failed to update campaign.')
         setError(err.message ?? 'Failed to update.')
       }
     })
@@ -71,8 +76,10 @@ export function CampaignsPage({
     startTransition(async () => {
       try {
         await deleteCampaign(workspaceId, id)
+        toast.success('Campaign deleted successfully.')
         router.refresh()
       } catch (err: any) {
+        toast.error(err.message ?? 'Failed to delete campaign.')
         setError(err.message ?? 'Failed to delete.')
       }
     })

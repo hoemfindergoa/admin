@@ -3,6 +3,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { addActivity, completeActivity, deleteActivity } from './actions'
 import { CalendarCheck, Plus, Trash2, CheckCircle, Clock } from 'lucide-react'
+import { toast } from 'sonner'
 
 const KINDS = ['TASK', 'CALL', 'EMAIL', 'MEETING']
 
@@ -23,11 +24,13 @@ export function ActivitiesPage({ workspaceId, activities }: { workspaceId: strin
     startTransition(async () => {
       try {
         await addActivity(workspaceId, formData)
+        toast.success('Activity created successfully.')
         setSuccess('Activity created!')
         setShowForm(false)
         ;(e.target as HTMLFormElement).reset()
         router.refresh()
       } catch (err: any) {
+        toast.error(err.message ?? 'Failed to create activity.')
         setError(err.message ?? 'Failed to create activity.')
       }
     })
@@ -37,8 +40,10 @@ export function ActivitiesPage({ workspaceId, activities }: { workspaceId: strin
     startTransition(async () => {
       try {
         await completeActivity(workspaceId, id)
+        toast.success('Activity marked as complete.')
         router.refresh()
       } catch (err: any) {
+        toast.error(err.message ?? 'Could not complete activity.')
         setError(err.message ?? 'Failed to complete.')
       }
     })
@@ -49,8 +54,10 @@ export function ActivitiesPage({ workspaceId, activities }: { workspaceId: strin
     startTransition(async () => {
       try {
         await deleteActivity(workspaceId, id)
+        toast.success('Activity deleted successfully.')
         router.refresh()
       } catch (err: any) {
+        toast.error(err.message ?? 'Could not delete activity.')
         setError(err.message ?? 'Failed to delete.')
       }
     })

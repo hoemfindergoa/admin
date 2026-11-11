@@ -11,7 +11,7 @@ async function getAttendanceAccess(orgId: string) {
   const [{ data: org }, { data: member }, { data: teacher }] = await Promise.all([
     supabase.from('organizations').select('owner_id').eq('id', orgId).maybeSingle(),
     supabase.from('organization_users').select('role, permissions, status').eq('org_id', orgId).eq('user_id', user.id).maybeSingle(),
-    supabase.from('school_teachers').select('status').eq('org_id', orgId).eq('user_id', user.id).maybeSingle(),
+    supabase.from('school_teachers').select('status').eq('org_id', orgId).eq('user_id', user.id).eq('status', 'ACTIVE').maybeSingle(),
   ])
   const allowed = org?.owner_id === user.id || (member?.status === 'ACTIVE' && (member?.role === 'FRANCHISE_ADMIN' || (
     Array.isArray(member.permissions) && (member.permissions.includes('attendance') || member.permissions.includes('manage_school') || member.permissions.includes('teacher'))
@@ -33,6 +33,9 @@ export async function getAttendanceWorkspace(orgId: string, date: string, classI
   let attendance: any[] = []
   
   if (classId && sectionId) {
+    const selectedClass = (classes ?? []).find((item: any) => item.id === classId)
+    const selectedSection = (sections ?? []).find((item: any) => item.id === sectionId && item.class_id === classId)
+    if (!selectedClass || !selectedSection) throw new Error('You are not assigned to the selected class and section.')
     const [{ data: studentsData }, { data: attendanceData }] = await Promise.all([
       supabase.from('students').select('id, student_name, admission_number').eq('org_id', orgId).eq('class_id', classId).eq('section_id', sectionId).order('student_name'),
       supabase.from('school_attendance').select('*').eq('org_id', orgId).eq('class_id', classId).eq('section_id', sectionId).eq('date', date)
@@ -57,6 +60,21 @@ export async function saveAttendance(orgId: string, classId: string, sectionId: 
   
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Unauthorized')
+
+  if (!classId || !sectionId || !date) throw new Error('Choose a valid class, section, and date.')
+  const [{ data: selectedClass, error: classError }, { data: selectedSection, error: sectionError }] = await Promise.all([
+    supabase.from('school_classes').select('id').eq('org_id', orgId).eq('id', classId).maybeSingle(),
+    supabase.from('school_sections').select('id').eq('org_id', orgId).eq('class_id', classId).eq('id', sectionId).maybeSingle(),
+  ])
+  if (classError || !selectedClass) throw new Error(classError?.message ?? 'You are not assigned to this class.')
+  if (sectionError || !selectedSection) throw new Error(sectionError?.message ?? 'You are not assigned to this section.')
+  const studentIds = [...new Set(attendanceData.map((record) => record.student_id))]
+  if (studentIds.length !== attendanceData.length) throw new Error('Attendance includes duplicate students.')
+  if (studentIds.length) {
+    const { data: authorizedStudents, error: studentError } = await supabase.from('students').select('id').eq('org_id', orgId).eq('class_id', classId).eq('section_id', sectionId).in('id', studentIds)
+    if (studentError || (authorizedStudents?.length ?? 0) !== studentIds.length) throw new Error(studentError?.message ?? 'Attendance contains students outside your assigned class.')
+  }
+  if (attendanceData.some((record) => !['PRESENT', 'ABSENT', 'LATE', 'HALF_DAY'].includes(record.status))) throw new Error('Choose a valid attendance status for every student.')
 
   // Prepare records for upsert
   const records = attendanceData.map(record => ({

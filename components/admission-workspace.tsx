@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 
 import { createAdmissionForm } from '@/app/dashboard/[orgId]/admission/actions'
+import { toast } from 'sonner'
 
 type ClassOption = { id: string; name: string }
 type AdmissionForm = { id: string; name: string; deadline: string; classes: string[] }
@@ -35,13 +36,14 @@ export function AdmissionWorkspace({ orgId, classes, forms = [] }: { orgId: stri
       formData.set('classes', JSON.stringify(selectedClasses))
 
       await createAdmissionForm(orgId, formData)
+      toast.success('Admission form created successfully.')
 
       setName('')
       setDeadline('')
       setSelectedClasses([])
       setOpen(false)
     } catch (err: any) {
-      alert(err.message || 'Failed to create form. Ensure database tables exist.')
+      toast.error(err.message || 'Failed to create form. Ensure database tables exist.')
     } finally {
       setIsSubmitting(false)
     }

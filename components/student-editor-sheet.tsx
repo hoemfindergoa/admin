@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { saveStudent } from '@/app/dashboard/[orgId]/students/actions'
 import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
 
 type Option = { id: string; name: string }
 type Detail = { student_id: string; house_id: string | null; active_fee: number | null; optional_subjects: string[]; details: Record<string, string | null>; siblings: Array<{ name: string; class: string }>; concessions: Array<{ name: string; amount: string; note: string }>; profile_picture_path: string | null; profile_picture_url?: string | null; updated_at: string; updated_by_email: string | null }
@@ -163,8 +164,8 @@ export function StudentEditorSheet({ orgId, open, onOpenChange, onSaved, student
     if (detail?.profile_picture_path) formData.set('existing_profile_picture_path', detail.profile_picture_path)
     if (profile) formData.set('profile_picture', profile)
     startTransition(async () => {
-      try { const result = await saveStudent(orgId, formData); onOpenChange(false); onSaved?.(result.warning); router.refresh() }
-      catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not save student.') }
+      try { const result = await saveStudent(orgId, formData); toast.success(student ? 'Student details updated.' : 'Student created successfully.'); onOpenChange(false); onSaved?.(result.warning); router.refresh() }
+      catch (cause) { const message = cause instanceof Error ? cause.message : 'Could not save student.'; setError(message); toast.error(message) }
     })
   }
 

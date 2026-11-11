@@ -47,6 +47,11 @@ export default async function Login({
       if (accountRole !== 'TEACHER' && accountRole !== 'PARENT' && accountRole !== 'CRM_MEMBER') {
         await adminClient.from('organization_users').update({ user_id: authUser.id, status: 'ACTIVE' }).eq('email', authUser.email)
       }
+      if (destination === '/dashboard' && accountRole === 'TEACHER') {
+        const { data: teacher } = await adminClient.from('school_teachers').select('org_id').eq('user_id', authUser.id).eq('status', 'ACTIVE').order('created_at').limit(1).maybeSingle()
+        if (teacher?.org_id) return redirect(`/teacher/${teacher.org_id}`)
+      }
+      if (destination === '/dashboard' && accountRole === 'PARENT') return redirect('/parent')
     }
 
     return redirect(destination)

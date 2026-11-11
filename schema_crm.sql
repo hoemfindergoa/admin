@@ -573,9 +573,12 @@ grant execute on function public.crm_can_access_note(uuid, text, uuid) to authen
 create or replace function public.provision_crm_workspace_for_organization()
 returns trigger language plpgsql security definer set search_path = public as $$
 begin
-  insert into public.crm_workspaces (organization_id, owner_user_id, name)
-  values (new.id, new.owner_id, new.name || ' CRM')
-  on conflict (organization_id) do nothing;
+  if not exists (
+    select 1 from public.crm_workspaces where organization_id = new.id
+  ) then
+    insert into public.crm_workspaces (organization_id, owner_user_id, name)
+    values (new.id, new.owner_id, new.name || ' CRM');
+  end if;
   return new;
 end;
 $$;

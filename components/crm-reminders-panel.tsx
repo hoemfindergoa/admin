@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Check, Clock3, ExternalLink } from 'lucide-react'
 import { completeActivity } from '@/app/crm/[workspaceId]/activities/actions'
+import { toast } from 'sonner'
 
 type ReminderActivity = {
   id: string
@@ -34,9 +35,12 @@ export function CrmRemindersPanel({
     startTransition(async () => {
       try {
         await completeActivity(workspaceId, id)
+        toast.success('Reminder marked as done.')
         router.refresh()
       } catch (cause) {
-        setError(cause instanceof Error ? cause.message : 'Could not complete this reminder.')
+        const message = cause instanceof Error ? cause.message : 'Could not complete this reminder.'
+        setError(message)
+        toast.error(message)
       } finally {
         setPendingId(null)
       }

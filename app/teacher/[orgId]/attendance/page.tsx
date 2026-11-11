@@ -9,5 +9,5 @@ export default async function TeacherAttendancePage({ params, searchParams }: { 
   const targetDate = date || new Date().toISOString().split('T')[0]!
 
   const data = await getAttendanceWorkspace(orgId, targetDate, classId, sectionId)
-  return <AttendanceWorkspace orgId={orgId} {...data} />
+  return <AttendanceWorkspace orgId={orgId} basePath={`/teacher/${orgId}`} {...data} />
 }

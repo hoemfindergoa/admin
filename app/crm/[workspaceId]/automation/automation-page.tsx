@@ -3,6 +3,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { addAutomationRule, toggleAutomationRule, deleteAutomationRule } from './actions'
 import { Settings2, Plus, Trash2, Zap, Power } from 'lucide-react'
+import { toast } from 'sonner'
 
 export function AutomationPage({ workspaceId, rules }: { workspaceId: string, rules: any[] }) {
   const router = useRouter()
@@ -21,11 +22,13 @@ export function AutomationPage({ workspaceId, rules }: { workspaceId: string, ru
     startTransition(async () => {
       try {
         await addAutomationRule(workspaceId, formData)
+        toast.success('Automation rule created successfully.')
         setSuccess('Rule created!')
         setShowForm(false)
         ;(e.target as HTMLFormElement).reset()
         router.refresh()
       } catch (err: any) {
+        toast.error(err.message ?? 'Failed to create automation rule.')
         setError(err.message ?? 'Failed to create rule.')
       }
     })
@@ -35,8 +38,10 @@ export function AutomationPage({ workspaceId, rules }: { workspaceId: string, ru
     startTransition(async () => {
       try {
         await toggleAutomationRule(workspaceId, id, !current)
+        toast.success(current ? 'Automation rule paused.' : 'Automation rule activated.')
         router.refresh()
       } catch (err: any) {
+        toast.error(err.message ?? 'Failed to update automation rule.')
         setError(err.message ?? 'Failed to toggle.')
       }
     })
@@ -47,8 +52,10 @@ export function AutomationPage({ workspaceId, rules }: { workspaceId: string, ru
     startTransition(async () => {
       try {
         await deleteAutomationRule(workspaceId, id)
+        toast.success('Automation rule deleted successfully.')
         router.refresh()
       } catch (err: any) {
+        toast.error(err.message ?? 'Failed to delete automation rule.')
         setError(err.message ?? 'Failed to delete.')
       }
     })

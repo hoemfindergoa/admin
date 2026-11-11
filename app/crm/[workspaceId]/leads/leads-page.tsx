@@ -16,6 +16,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
+import { toast } from 'sonner'
 
 const SOURCES = ['Website', 'Instagram', 'Facebook', 'LinkedIn', 'Twitter', 'Email', 'Phone', 'Referral', 'Walk-in', 'Other']
 const STATUSES = ['NEW', 'CONTACTED', 'QUALIFIED', 'PROPOSAL', 'NEGOTIATION', 'WON', 'LOST']
@@ -115,11 +116,13 @@ export function LeadsPage({
     startTransition(async () => {
       try {
         await addLead(workspaceId, formData)
+        toast.success('Lead created successfully.')
         setSuccess('Lead added successfully!')
         setShowForm(false)
         ;(e.target as HTMLFormElement).reset()
         router.refresh()
       } catch (err: any) {
+        toast.error(err.message ?? 'Failed to add lead.')
         setError(err.message ?? 'Failed to add lead.')
       }
     })
@@ -129,8 +132,10 @@ export function LeadsPage({
     startTransition(async () => {
       try {
         await updateLeadStatus(workspaceId, leadId, status)
+        toast.success('Lead status updated.')
         router.refresh()
       } catch (err: any) {
+        toast.error(err.message ?? 'Failed to update lead status.')
         setError(err.message ?? 'Failed to update status.')
       }
     })
@@ -140,8 +145,10 @@ export function LeadsPage({
     startTransition(async () => {
       try {
         await assignLead(workspaceId, leadId, ownerUserId)
+        toast.success('Lead assigned successfully.')
         router.refresh()
       } catch (err: any) {
+        toast.error(err.message ?? 'Failed to assign lead.')
         setError(err.message ?? 'Failed to assign lead.')
       }
     })
@@ -152,8 +159,10 @@ export function LeadsPage({
     startTransition(async () => {
       try {
         await deleteLead(workspaceId, leadId)
+        toast.success('Lead archived successfully.')
         router.refresh()
       } catch (err: any) {
+        toast.error(err.message ?? 'Failed to archive lead.')
         setError(err.message ?? 'Failed to delete lead.')
       }
     })
@@ -173,11 +182,13 @@ export function LeadsPage({
         await updateLeadStatus(workspaceId, activeRemarkLead.id, newStatus)
       }
       setSuccess(text && statusChanged ? 'Note saved and lead status updated.' : text ? 'Note saved.' : 'Lead status updated.')
+      toast.success(text && statusChanged ? 'Note saved and lead status updated.' : text ? 'Note saved.' : 'Lead status updated.')
       setCustomRemark('')
       setActiveRemarkLead(null)
       setNewStatus('')
       router.refresh()
     } catch (err: any) {
+      toast.error(err.message ?? 'Failed to save lead update.')
       setError(err.message ?? 'Failed to save remark.')
     } finally {
       setRemarkLoading(false)
@@ -202,10 +213,12 @@ export function LeadsPage({
       await createLeadReminder(workspaceId, activeRemarkLead.id, formData)
       setReminderError('')
       setSuccess('Reminder added to the assignee’s dashboard.')
+      toast.success('Reminder added to the assignee’s dashboard.')
       setActiveRemarkLead(null)
       form.reset()
       router.refresh()
     } catch (err: any) {
+      toast.error(err.message ?? 'Could not create this reminder.')
       setReminderError(err.message ?? 'Could not create this reminder.')
     } finally {
       setReminderLoading(false)

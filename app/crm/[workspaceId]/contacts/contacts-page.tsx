@@ -3,6 +3,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { addContact, deleteContact } from './actions'
 import { Users, Plus, Trash2, Phone, Mail, Building } from 'lucide-react'
+import { toast } from 'sonner'
 
 export function ContactsPage({ workspaceId, contacts, accounts }: { workspaceId: string, contacts: any[], accounts: any[] }) {
   const router = useRouter()
@@ -22,11 +23,13 @@ export function ContactsPage({ workspaceId, contacts, accounts }: { workspaceId:
     startTransition(async () => {
       try {
         await addContact(workspaceId, formData)
+        toast.success('Contact created successfully.')
         setSuccess('Contact created!')
         setShowForm(false)
         ;(e.target as HTMLFormElement).reset()
         router.refresh()
       } catch (err: any) {
+        toast.error(err.message ?? 'Failed to create contact.')
         setError(err.message ?? 'Failed to create contact.')
       }
     })
@@ -37,8 +40,10 @@ export function ContactsPage({ workspaceId, contacts, accounts }: { workspaceId:
     startTransition(async () => {
       try {
         await deleteContact(workspaceId, id)
+        toast.success('Contact deleted successfully.')
         router.refresh()
       } catch (err: any) {
+        toast.error(err.message ?? 'Failed to delete contact.')
         setError(err.message ?? 'Failed to delete.')
       }
     })

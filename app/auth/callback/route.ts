@@ -47,9 +47,18 @@ export async function GET(request: Request) {
   }
 
   const requestedNext = requestUrl.searchParams.get('next')
-  const next = requestedNext?.startsWith('/') && !requestedNext.startsWith('//')
-    ? requestedNext
-    : '/dashboard'
+  let roleNext: string | null = null
+  if (authUser) {
+    const accountRole = (authUser as any).user_metadata?.role
+    const adminClient = createAdminClient()
+    if (accountRole === 'PARENT') roleNext = '/parent'
+    if (accountRole === 'TEACHER') {
+      const { data: teacher } = await adminClient.from('school_teachers').select('org_id').eq('user_id', authUser.id).eq('status', 'ACTIVE').order('created_at').limit(1).maybeSingle()
+      if (teacher?.org_id) roleNext = `/teacher/${teacher.org_id}`
+    }
+  }
+  const safeRequestedNext = requestedNext?.startsWith('/') && !requestedNext.startsWith('//') ? requestedNext : null
+  const next = safeRequestedNext && safeRequestedNext !== '/dashboard' ? safeRequestedNext : roleNext ?? safeRequestedNext ?? '/dashboard'
   // The default Supabase email template returns the session in the URL fragment.
   // Fragments are not sent to server routes, so let a browser-side callback read it.
   return NextResponse.redirect(new URL(`/auth/complete?next=${encodeURIComponent(next)}`, requestUrl.origin))

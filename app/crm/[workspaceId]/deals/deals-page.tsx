@@ -3,6 +3,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { addDeal, updateDealStage, deleteDeal } from './actions'
 import { Briefcase, Plus, Trash2, Calendar } from 'lucide-react'
+import { toast } from 'sonner'
 
 const STAGES = [
   { id: 'QUALIFICATION', label: 'Qualification' },
@@ -33,11 +34,13 @@ export function DealsPage({ workspaceId, deals, accounts, contacts, leads }: { w
     startTransition(async () => {
       try {
         await addDeal(workspaceId, formData)
+        toast.success('Deal created successfully.')
         setSuccess('Deal created!')
         setShowForm(false)
         ;(e.target as HTMLFormElement).reset()
         router.refresh()
       } catch (err: any) {
+        toast.error(err.message ?? 'Failed to create deal.')
         setError(err.message ?? 'Failed to create deal.')
       }
     })
@@ -47,8 +50,10 @@ export function DealsPage({ workspaceId, deals, accounts, contacts, leads }: { w
     startTransition(async () => {
       try {
         await updateDealStage(workspaceId, id, stage)
+        toast.success('Deal stage updated.')
         router.refresh()
       } catch (err: any) {
+        toast.error(err.message ?? 'Failed to update deal.')
         setError(err.message ?? 'Failed to update.')
       }
     })
@@ -59,8 +64,10 @@ export function DealsPage({ workspaceId, deals, accounts, contacts, leads }: { w
     startTransition(async () => {
       try {
         await deleteDeal(workspaceId, id)
+        toast.success('Deal deleted successfully.')
         router.refresh()
       } catch (err: any) {
+        toast.error(err.message ?? 'Failed to delete deal.')
         setError(err.message ?? 'Failed to delete.')
       }
     })

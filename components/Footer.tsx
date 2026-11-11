@@ -6,10 +6,12 @@ import {
   Facebook, Instagram, Youtube, Twitter, Github
 } from "lucide-react";
 import Image from "next/image";
+import { usePathname } from 'next/navigation'
 import logo from "../public/logonew.png";
 import supabase from "@/utils/supabase/supabase";
 
 export default function Footer() {
+  const pathname = usePathname()
   const [isHealthy, setIsHealthy] = useState(false);
 
   useEffect(() => {
@@ -31,6 +33,8 @@ export default function Footer() {
     };
     checkSupabaseHealth();
   }, []);
+
+  if (pathname.startsWith('/teacher/') || pathname.startsWith('/parent/')) return null
 
   return (
     <footer className="bg-white border-t border-gray-200 font-sans">

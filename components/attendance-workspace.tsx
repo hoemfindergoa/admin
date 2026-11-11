@@ -12,7 +12,7 @@ import { saveAttendance } from '@/app/dashboard/[orgId]/attendance/actions'
 
 type AttendanceStatus = 'PRESENT' | 'ABSENT' | 'LATE' | 'HALF_DAY'
 
-export function AttendanceWorkspace({ orgId, classes, sections, students, attendance, date, classId, sectionId }: any) {
+export function AttendanceWorkspace({ orgId, classes, sections, students, attendance, date, classId, sectionId, basePath = `/dashboard/${orgId}` }: any) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
 
@@ -48,7 +48,7 @@ export function AttendanceWorkspace({ orgId, classes, sections, students, attend
     if (filterDate) params.set('date', filterDate)
     if (filterClass) params.set('classId', filterClass)
     if (filterSection) params.set('sectionId', filterSection)
-    router.push(`/dashboard/${orgId}/attendance?${params.toString()}`)
+    router.push(`${basePath}/attendance?${params.toString()}`)
   }
 
   function handleSave() {

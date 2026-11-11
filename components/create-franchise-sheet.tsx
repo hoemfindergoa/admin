@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/sheet'
 import { createOrganization } from '@/app/dashboard/actions'
 import { FranchiseCommercialFields } from '@/components/franchise-commercial-fields'
+import { toast } from 'sonner'
 
 interface CreateFranchiseSheetProps {
   trigger?: React.ReactNode
@@ -53,12 +54,14 @@ export function CreateFranchiseSheet({ trigger }: CreateFranchiseSheetProps) {
     startTransition(async () => {
       try {
         await createOrganization(formData)
+        toast.success('Franchise created successfully.')
         setOpen(false)
         formRef.current?.reset()
         setAffiliationValue('')
         setAffiliationMode('select')
         router.refresh()
       } catch (err: any) {
+        toast.error(err?.message ?? 'Could not create franchise.')
         setError(err?.message ?? 'Something went wrong. Please try again.')
       }
     })

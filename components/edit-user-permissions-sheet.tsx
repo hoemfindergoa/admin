@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { updateUserPermissions } from '@/app/dashboard/[orgId]/users/actions'
+import { toast } from 'sonner'
 
 const PERMISSIONS = [
   { id: 'manage_school', label: 'Manage School' },
@@ -40,9 +41,11 @@ export function EditUserPermissionsSheet({
     startTransition(async () => {
       try {
         await updateUserPermissions(orgId, user.id, selected)
+        toast.success('User permissions updated.')
         setOpen(false)
         router.refresh()
       } catch (err: any) {
+        toast.error(err?.message ?? 'Could not update user permissions.')
         setError(err?.message ?? 'Could not update permissions.')
       }
     })

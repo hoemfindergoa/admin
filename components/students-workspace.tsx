@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { assignStudent, importStudents } from '@/app/dashboard/[orgId]/students/actions'
 import { StudentEditorSheet } from '@/components/student-editor-sheet'
+import { toast } from 'sonner'
 
 type SchoolClass = { id: string; name: string }
 type Section = { id: string; class_id: string; name: string }
@@ -132,14 +133,14 @@ export function StudentsWorkspace({ orgId, students: initialStudents, classes, s
       const parsed = toRecords(matrix)
       if (parsed.length > 500) throw new Error('Import up to 500 students per upload.')
       setRows(parsed); setFileName(file.name)
-    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not read this file.') }
+    } catch (cause) { const message = cause instanceof Error ? cause.message : 'Could not read this file.'; setError(message); toast.error(message) }
   }
 
   function doImport() {
     setError(''); setNotice('')
     startTransition(async () => {
-      try { const result = await importStudents(orgId, rows); setNotice(`${result.imported} students imported. ${result.parentsCreated} parent accounts linked or invited.`); setError(result.parentWarnings.join('\n')); setRows([]); setFileName(''); router.refresh() }
-      catch (cause) { setError(cause instanceof Error ? cause.message : 'Import failed.') }
+      try { const result = await importStudents(orgId, rows); const message = `${result.imported} students imported. ${result.parentsCreated} parent accounts linked or invited.`; setNotice(message); toast.success(message); if (result.parentWarnings.length) toast.warning(result.parentWarnings.join(' ')); setError(result.parentWarnings.join('\n')); setRows([]); setFileName(''); router.refresh() }
+      catch (cause) { const message = cause instanceof Error ? cause.message : 'Import failed.'; setError(message); toast.error(message) }
     })
   }
 
@@ -147,8 +148,8 @@ export function StudentsWorkspace({ orgId, students: initialStudents, classes, s
     const assignment = assignments[student.id] ?? { classId: student.class_id, sectionId: student.section_id }
     setError(''); setNotice('')
     startTransition(async () => {
-      try { await assignStudent(orgId, student.id, assignment.classId, assignment.sectionId); setStudents((current) => current.map((item) => item.id === student.id ? { ...item, class_id: assignment.classId, section_id: assignment.sectionId } : item)); setNotice(`Updated ${student.student_name}'s class and section.`); router.refresh() }
-      catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not update student.') }
+      try { await assignStudent(orgId, student.id, assignment.classId, assignment.sectionId); setStudents((current) => current.map((item) => item.id === student.id ? { ...item, class_id: assignment.classId, section_id: assignment.sectionId } : item)); const message = `Updated ${student.student_name}'s class and section.`; setNotice(message); toast.success(message); router.refresh() }
+      catch (cause) { const message = cause instanceof Error ? cause.message : 'Could not update student.'; setError(message); toast.error(message) }
     })
   }
 

@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/sheet'
 import { updateOrganization, deleteOrganization } from '@/app/dashboard/actions'
 import { FranchiseCommercialFields } from '@/components/franchise-commercial-fields'
+import { toast } from 'sonner'
 
 interface Org {
   id: string
@@ -87,9 +88,11 @@ export function EditFranchiseSheet({ org, trigger }: EditFranchiseSheetProps) {
     startTransition(async () => {
       try {
         await updateOrganization(org.id, formData)
+        toast.success('Franchise details updated successfully.')
         setOpen(false)
         router.refresh()
       } catch (err: any) {
+        toast.error(err?.message ?? 'Could not update franchise details.')
         setError(err?.message ?? 'Something went wrong. Please try again.')
       }
     })
@@ -102,9 +105,11 @@ export function EditFranchiseSheet({ org, trigger }: EditFranchiseSheetProps) {
     startTransition(async () => {
       try {
         await deleteOrganization(org.id)
+        toast.success('Franchise deleted successfully.')
         setOpen(false)
         router.refresh()
       } catch (err: any) {
+        toast.error(err?.message ?? 'Could not delete franchise.')
         setError(err?.message ?? 'Failed to delete franchise. It may have dependent data (like students or staff) that needs to be deleted first.')
       }
     })

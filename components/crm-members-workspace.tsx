@@ -4,6 +4,7 @@ import { FormEvent, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Mail, ShieldCheck, UserPlus, UserRoundX, Users } from 'lucide-react'
 import { inviteCrmMember, removeCrmMember, updateCrmMemberRole } from '@/app/crm/[workspaceId]/actions'
+import { toast } from 'sonner'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
@@ -20,14 +21,14 @@ export function CrmMembersWorkspace({ members, workspaceId }: { members: CrmMemb
     const form = event.currentTarget
     const formData = new FormData(form)
     startTransition(async () => {
-      try { const result = await inviteCrmMember(workspaceId, formData); form.reset(); setNotice(result.existingAccount ? 'A CRM setup link was sent to the existing account.' : 'CRM invitation sent.'); router.refresh() }
-      catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not invite this CRM user.') }
+      try { const result = await inviteCrmMember(workspaceId, formData); form.reset(); const message = result.existingAccount ? 'A CRM setup link was sent to the existing account.' : 'CRM invitation sent.'; setNotice(message); toast.success(message); router.refresh() }
+      catch (cause) { const message = cause instanceof Error ? cause.message : 'Could not invite this CRM user.'; setError(message); toast.error(message) }
     })
   }
 
   function remove(member: CrmMember) {
     if (!window.confirm(`Remove ${member.name} from the sales CRM?`)) return
-    startTransition(async () => { try { await removeCrmMember(workspaceId, member.id); setNotice(`${member.name} no longer has CRM access.`); router.refresh() } catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not remove this CRM member.') } })
+    startTransition(async () => { try { await removeCrmMember(workspaceId, member.id); const message = `${member.name} no longer has CRM access.`; setNotice(message); toast.success(message); router.refresh() } catch (cause) { const message = cause instanceof Error ? cause.message : 'Could not remove this CRM member.'; setError(message); toast.error(message) } })
   }
 
   return (
@@ -125,8 +126,8 @@ export function CrmMembersWorkspace({ members, workspaceId }: { members: CrmMemb
                         value={member.role}
                         disabled={pending}
                         onChange={(event) => startTransition(async () => {
-                          try { await updateCrmMemberRole(workspaceId, member.id, event.target.value); setNotice(`${member.name}'s role updated.`); router.refresh() }
-                          catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not update role.') }
+                          try { await updateCrmMemberRole(workspaceId, member.id, event.target.value); const message = `${member.name}'s role updated.`; setNotice(message); toast.success(message); router.refresh() }
+                          catch (cause) { const message = cause instanceof Error ? cause.message : 'Could not update role.'; setError(message); toast.error(message) }
                         })}
                         className="h-7 rounded-md border border-zinc-200 bg-white px-2 text-[11px] font-medium text-zinc-700 focus:outline-none"
                       >

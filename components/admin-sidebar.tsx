@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils'
 const NAV_ITEMS = [
   { name: 'Insights & Franchises', href: '/dashboard', icon: LayoutDashboard, color: 'text-indigo-600' },
   { name: 'Kit Orders', href: '/dashboard/student-kits', icon: Package, color: 'text-lime-600' },
-  { name: 'Tools (Coming Soon)', href: '#', icon: Wrench, color: 'text-zinc-400', disabled: true },
+  { name: 'School Tools', href: '/dashboard/tools', icon: Wrench, color: 'text-violet-600' },
 ]
 
 export function AdminSidebar() {
@@ -47,19 +47,17 @@ export function AdminSidebar() {
       <div className="flex-1 overflow-y-auto py-5 overflow-x-hidden no-scrollbar">
         <nav className="grid gap-1.5 px-3">
           {NAV_ITEMS.map((item) => {
-            const isActive = pathname === item.href
+            const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(`${item.href}/`))
             return (
               <Link
                 key={item.name}
-                href={item.disabled ? '#' : item.href}
+                href={item.href}
                 className={cn(
                   "flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-semibold transition-all relative overflow-hidden group/item",
                   isActive
                     ? "bg-indigo-50/80 text-indigo-700 shadow-sm ring-1 ring-indigo-200/50"
                     : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900",
-                  item.disabled && "opacity-60 cursor-not-allowed hover:bg-transparent hover:text-zinc-500"
                 )}
-                onClick={(e) => item.disabled && e.preventDefault()}
               >
                 <item.icon className={cn(
                   "h-4 w-4 shrink-0 transition-colors",
@@ -71,7 +69,7 @@ export function AdminSidebar() {
                 )}>
                   {item.name}
                 </span>
-                {isActive && isExpanded && !item.disabled && (
+                {isActive && isExpanded && (
                   <ChevronRight className="h-3.5 w-3.5 absolute right-3 opacity-60 text-indigo-600" />
                 )}
               </Link>

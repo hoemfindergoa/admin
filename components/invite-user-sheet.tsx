@@ -17,6 +17,7 @@ import {
   SheetClose,
 } from '@/components/ui/sheet'
 import { inviteUser } from '@/app/dashboard/[orgId]/users/actions'
+import { toast } from 'sonner'
 
 const PERMISSIONS_LIST = [
   { id: 'manage_school', label: 'Manage School' },
@@ -56,10 +57,12 @@ export function InviteUserSheet({ orgId, trigger }: InviteUserSheetProps) {
     startTransition(async () => {
       try {
         await inviteUser(orgId, formData, selectedPermissions)
+        toast.success('Invitation sent successfully.')
         setOpen(false)
         formRef.current?.reset()
         router.refresh()
       } catch (err: any) {
+        toast.error(err?.message ?? 'Could not send invitation.')
         setError(err?.message ?? 'Something went wrong. Please try again.')
       }
     })

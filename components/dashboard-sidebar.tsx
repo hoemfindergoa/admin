@@ -20,7 +20,8 @@ import {
   Settings,
   ChevronRight,
   ArrowLeft,
-  Package
+  Package,
+  Wrench,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -42,6 +43,7 @@ const ALL_NAV_ITEMS = [
   { name: 'Transport',       href: (id: string) => `/dashboard/${id}/transport`,    icon: Bus,             permissionKey: 'transport', color: 'text-yellow-600' },
   { name: 'Hostel',          href: (id: string) => `/dashboard/${id}/hostel`,       icon: Building,        permissionKey: 'hostel', color: 'text-pink-600' },
   { name: 'Student Kits',    href: (id: string) => `/dashboard/${id}/student-kits`, icon: Package,         permissionKey: 'manage_school', color: 'text-lime-600' },
+  { name: 'School Tools',    href: (id: string) => `/dashboard/${id}/tools`,        icon: Wrench,          permissionKey: 'school_tools', color: 'text-violet-600' },
   { name: 'Settings',        href: (id: string) => `/dashboard/${id}/settings`,     icon: Settings,        permissionKey: 'settings', color: 'text-zinc-600' },
 ]
 
@@ -60,6 +62,7 @@ export function DashboardSidebar({ orgId, permissions, isOwner }: DashboardSideb
   const navigation = ALL_NAV_ITEMS.filter((item) => {
     if (permissions === null) return true           // owner → show all
     if (item.permissionKey === null) return true    // always visible (Dashboard)
+    if (item.permissionKey === 'school_tools') return permissions.includes('students') || permissions.includes('manage_school')
     return permissions.includes(item.permissionKey) // staff → permission check
   }).map((item) => ({
     ...item,

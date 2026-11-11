@@ -21,11 +21,9 @@ export default async function TeacherLayout({
 
   const [
     { data: org, error: orgError },
-    { data: allOrgs },
     { data: teacherRecord },
   ] = await Promise.all([
     createAdminClient().from('organizations').select('*').eq('id', orgId).single(),
-    supabase.from('organizations').select('id, name, logo_url').order('created_at', { ascending: true }),
     supabase
       .from('school_teachers')
       .select('id, name, status')
@@ -39,10 +37,10 @@ export default async function TeacherLayout({
   }
 
   return (
-    <div className="flex min-h-screen w-full bg-muted/40 absolute inset-0 z-50 bg-background">
+    <div className="flex min-h-screen w-full bg-background">
       <TeacherSidebar orgId={orgId} />
-      <div className="flex flex-col sm:gap-4 sm:py-0 w-full min-w-0 h-screen overflow-y-auto">
-        <DashboardTopNav orgId={orgId} orgName={org.name} orgLogo={org.logo_url} allOrgs={allOrgs ?? []} isSuperAdmin={false} />
+      <div className="flex min-h-screen flex-col sm:gap-4 sm:py-0 w-full min-w-0 overflow-y-auto">
+        <DashboardTopNav orgId={orgId} orgName={org.name} orgLogo={org.logo_url} allOrgs={[{ id: org.id, name: org.name, logo_url: org.logo_url }]} isSuperAdmin={false} />
         <main className="flex-1 items-start p-4 sm:px-6 sm:py-6 w-full">
           {children}
         </main>

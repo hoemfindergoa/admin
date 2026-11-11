@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, MessageCircle, Send } from 'lucide-react'
 import { sendTeamMessage } from '@/app/crm/[workspaceId]/chat/actions'
+import { toast } from 'sonner'
 
 type Contact = { userId: string; name: string; email: string; role: string; isAdmin: boolean; unreadCount: number }
 type Message = { id: string; sender_user_id: string; body: string; created_at: string }
@@ -46,9 +47,11 @@ export function CrmTeamChat({
     startTransition(async () => {
       try {
         await sendTeamMessage(workspaceId, selected.userId, message)
+        toast.success('Message sent.')
         setBody('')
         router.refresh()
       } catch (cause) {
+        toast.error(cause instanceof Error ? cause.message : 'Could not send message.')
         setError(cause instanceof Error ? cause.message : 'Could not send your message.')
       }
     })
